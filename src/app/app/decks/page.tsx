@@ -9,7 +9,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from '@/app/providers/AuthProvider';
 
 const initialFolders = [
   {
