@@ -106,6 +106,10 @@ export default function DecksClient() {
         (currentFolders ?? []).map(f => f.id === updatedFolder.id ? updatedFolder : f)
     );
   };
+  
+  const handleCreateFolder = (newFolder: FolderSummary) => {
+    setFolders(currentFolders => [...(currentFolders ?? []), newFolder]);
+  };
 
   const loading = user && (decks === null || folders === null);
 

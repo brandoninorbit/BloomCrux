@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUserAuth } from "@/context/AuthContext";
 import { createFolder } from "@/adapters/folders";
-import type { FolderColor } from "@/types";
+import type { FolderColor, FolderSummary } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,11 @@ function colorToHex(c: FolderColor) {
   }
 }
 
-export default function NewFolderPage() {
+export default function NewFolderPage({
+  onCreate,
+}: {
+  onCreate?: (newFolder: FolderSummary) => void;
+}) {
   const { user } = useUserAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -52,7 +56,10 @@ export default function NewFolderPage() {
     setError(null);
 
     try {
-      await createFolder(user.uid, { name: name.trim(), color });
+      const newFolder = await createFolder(user.uid, { name: name.trim(), color });
+      if (onCreate) {
+        onCreate(newFolder);
+      }
       toast({ title: "Folder created!", description: `The "${name.trim()}" folder has been added.` });
       router.push("/decks");
     } catch (err) {
