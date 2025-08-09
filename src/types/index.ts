@@ -143,6 +143,20 @@ export type Topic = {
     decks: Deck[];
 };
 
+export interface DeckSummary {
+  id: string;
+  name: string;         // required for UI cards
+  updatedAt?: string | number | Date | null;
+  folderId?: string | null;
+}
+
+export interface FolderSummary {
+  id: string;
+  name: string;
+  setCount?: number;
+}
+
+
 export type CardAttempt = {
     id: string; // from doc ID
     userId: string;
@@ -291,5 +305,3 @@ export interface ShopItem {
     icon: string; // Lucide icon name
     type: 'power-up' | 'avatar-frame' | 'deck-cover' | 'theme';
 }
-
-    
