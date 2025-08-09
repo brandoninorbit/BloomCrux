@@ -318,6 +318,7 @@ export default function EditDeckPage() {
 
   // State for deleting sources
   const [sourceToDelete, setSourceToDelete] = useState<string | null>(null);
+  const [deckSources, setDeckSources] = useState<string[]>([]);
 
   // State for sorting
   const [sortOrder, setSortOrder] = useState<'default'|'bloom'|'format'|'source'>('default');
@@ -366,10 +367,12 @@ export default function EditDeckPage() {
             setCards(migrateCards(fetchedCards || []));
             setTitle(mockDeck.title);
             setDescription(mockDeck.description);
+            setDeckSources(deckData.sources || ["questions_batch1_fixed.csv", "questions_batch2_fixed.csv"]);
         } else {
             setDeck({ id: 'mock-deck', title: 'Mock Deck Not Found', description: 'Please check the deck ID.', cards: [] });
             setTitle('Mock Deck Not Found');
             setDescription('Please check the deck ID.');
+            setDeckSources([]);
         }
         setLoading(false);
         return;
@@ -384,6 +387,7 @@ export default function EditDeckPage() {
           setCards(migrateCards(fetchedCards || [])); // Store cards separately
           setTitle(deckData.title);
           setDescription(deckData.description);
+          setDeckSources(deckData.sources || []);
         } else {
           toast({
             variant: "destructive",
@@ -453,6 +457,9 @@ export default function EditDeckPage() {
   };
   
   const handleAddImportedCards = () => {
+    if (fileName && !deckSources.includes(fileName)) {
+        setDeckSources(prev => [...prev, fileName]);
+    }
     setCards(prev => [...prev, ...newlyImportedCards]);
     setNewlyImportedCards([]); // Clear the staging area
     setFileName(null);
@@ -477,7 +484,7 @@ export default function EditDeckPage() {
     }
     setIsSaving(true);
     try {
-        const updatedDeck: Deck = { ...deck, title, description, cards };
+        const updatedDeck: Deck = { ...deck, title, description, cards, sources: deckSources };
         await saveDeck(user.uid, updatedDeck);
         toast({
             title: "Success!",
@@ -514,18 +521,13 @@ export default function EditDeckPage() {
     );
   };
   
-  const handleDeleteSource = (sourceName: string) => {
+  const handleDeleteSource = (sourceNameToDelete: string) => {
     if (!deck) return;
-    // Note: This logic is a placeholder. A real implementation would need
-    // to know which cards came from which source. For now, it just removes
-    // the source from the UI list.
-    const updatedSources = deck.sources?.filter(s => s !== sourceName) || [];
-    setDeck(prevDeck => prevDeck ? { ...prevDeck, sources: updatedSources } : null);
-    // You would also filter the `cards` state here if you had the source info on each card.
-    // setCards(prev => prev.filter(c => c.source !== sourceName));
+    setDeckSources(prev => prev.filter(s => s !== sourceNameToDelete));
+    setCards(prev => prev.filter(c => (c as any).source !== sourceNameToDelete));
     toast({
         title: "Source Removed",
-        description: `All cards from ${sourceName} have been removed from this deck. Save your changes to make it permanent.`
+        description: `All cards from ${sourceNameToDelete} have been removed from this deck. Save your changes to make it permanent.`
     });
     setSourceToDelete(null); // Close dialog
   }
@@ -603,7 +605,6 @@ export default function EditDeckPage() {
   }, [cards]);
 
   const starredCount = cards.filter(c => c.isStarred).length || 0;
-  const mockSources = deck?.sources || ["questions_batch1_fixed.csv", "questions_batch2_fixed.csv", "questions_batch3_fixed.csv"];
 
   if (loading) {
     return (
@@ -827,7 +828,7 @@ export default function EditDeckPage() {
             </CardHeader>
             <CardContent className="space-y-2">
                 <p className="text-sm text-muted-foreground">This deck contains cards imported from the following files.</p>
-                {mockSources.map((source, index) => (
+                {deckSources.map((source, index) => (
                     <div key={index} className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
                         <div className="flex items-center gap-2">
                             <FileText className="h-5 w-5" />
