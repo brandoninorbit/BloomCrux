@@ -56,10 +56,45 @@ export default function CsvImportGuide() {
         <DialogHeader>
           <div className="flex justify-between items-center">
             <DialogTitle>CSV Import Formatting Guide</DialogTitle>
-             <Button variant="outline" disabled>
-                <BrainCircuit className="mr-2 h-4 w-4" />
-                Use AI To Generate
-            </Button>
+             <Dialog>
+                <DialogTrigger asChild>
+                    <Button variant="outline">
+                        <BrainCircuit className="mr-2 h-4 w-4" />
+                        Use AI To Generate
+                    </Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Leveraging AI for Card Generation</DialogTitle>
+                         <DialogDescription>
+                            To get the best results from a large language model (LLM) like Gemini or ChatGPT, structure your prompt effectively.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4 text-sm">
+                        <div>
+                            <h4 className="font-semibold mb-1">1. Provide Context & Content</h4>
+                            <p className="text-muted-foreground">For the highest quality questions, paste your lecture notes, textbook chapters, or any other relevant content directly into the prompt.</p>
+                        </div>
+                         <div>
+                            <h4 className="font-semibold mb-1">2. Give Clear Instructions</h4>
+                            <p className="text-muted-foreground">Tell the AI to create a variety of question types. Aim for a good balance across all Bloom's Levels (Remember, Understand, Apply, Analyze, Evaluate, Create) so that each level has a relatively similar number of cards.</p>
+                        </div>
+                        <div>
+                            <h4 className="font-semibold mb-1">3. Use the Formatting Guide</h4>
+                            <p className="text-muted-foreground">Copy the entire CSV formatting guide from the previous dialog and paste it into your prompt. This gives the AI a perfect template to follow for its output.</p>
+                        </div>
+                        <div>
+                            <h4 className="font-semibold mb-1">4. Override Bloom Levels (Optional)</h4>
+                             <p className="text-muted-foreground">By default, cards are assigned a Bloom Level based on their type (e.g., MCQ is 'Remember'). To override this, start the text in the "Question" column with the desired level in brackets.</p>
+                             <div className="mt-2 p-3 bg-muted rounded-md border text-xs">
+                                <p className="font-semibold">Example:</p>
+                                <p>For a Standard MCQ you want to be at the 'Create' level, your question would be:</p>
+                                <p className="font-mono mt-1 text-foreground">[Create] Based on the principles of natural selection, which of these hypothetical creatures would be most likely to thrive?</p>
+                             </div>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
           </div>
           <DialogDescription>
             Your CSV must have a header row. The <code className="bg-muted px-1 py-0.5 rounded-sm">CardType</code> column is required and must exactly match one of the values below.
