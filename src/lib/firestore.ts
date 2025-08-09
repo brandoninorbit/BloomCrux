@@ -1,7 +1,10 @@
 import { 
   getUserProgress as _getUserProgress,
   getTopics as _getTopics,
+  getDeck,
   getDeckProgress,
+  getUserDeckProgress,
+  saveUserDeckProgress,
   getUserXpStats,
   getShopItems,
   purchaseShopItem,
@@ -9,7 +12,10 @@ import {
   saveSelectedCustomizations,
   getUserInventory,
   uploadProfilePhotoAndUpdateAuth,
-  resetDeckPurchaseCounts
+  resetDeckPurchaseCounts,
+  getDeckPurchaseCounts,
+  logCardAttempt,
+  purchasePowerUp
 } from "../stitch/lib/firestore";
 
 import type { GlobalProgress as AppGlobalProgress, SelectedCustomizations } from "@/types";
@@ -54,7 +60,10 @@ export function getUserCustomizations(
 
 // Re-export other helpers
 export {
+  getDeck,
   getDeckProgress,
+  getUserDeckProgress,
+  saveUserDeckProgress,
   getUserXpStats,
   getShopItems,
   purchaseShopItem,
@@ -62,5 +71,8 @@ export {
   saveSelectedCustomizations,
   getUserInventory,
   uploadProfilePhotoAndUpdateAuth,
-  resetDeckPurchaseCounts
+  resetDeckPurchaseCounts,
+  getDeckPurchaseCounts,
+  logCardAttempt,
+  purchasePowerUp
 };
