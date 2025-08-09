@@ -15,13 +15,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { Flashcard, StandardMCQCard, CardFormat, FillInTheBlankCard, ShortAnswerCard, BloomLevel, CompareContrastCard, DragAndDropSortingCard, DndItem, SequencingCard, TwoTierMCQCard } from '@/stitch/types';
+import type { Flashcard, StandardMCQCard, CardFormat, FillInTheBlankCard, ShortAnswerCard, BloomLevel, CompareContrastCard, DragAndDropSortingCard, DndItem, SequencingCard, TwoTierMCQCard, CERCard, CERPart } from '@/stitch/types';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Info, PlusCircle, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Separator } from './ui/separator';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 interface CreateCardDialogProps {
   open: boolean;
@@ -44,6 +45,13 @@ const DEFAULT_BLOOM_BY_FORMAT: Record<CardFormat, BloomLevel> = {
 };
 
 const BLOOM_LEVELS: BloomLevel[] = [ "Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create" ];
+
+type CerPartState = {
+    inputType: 'text' | 'mcq';
+    sampleAnswer: string;
+    options: string[];
+    correctIndex: number;
+};
 
 
 export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateCardDialogProps) {
@@ -83,6 +91,15 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
   const [sequencingPrompt, setSequencingPrompt] = useState('');
   const [sequenceItems, setSequenceItems] = useState(['']);
   
+  // CER State
+  const [cerScenario, setCerScenario] = useState('');
+  const [cerQuestion, setCerQuestion] = useState('');
+  const [cerParts, setCerParts] = useState<Record<'claim' | 'evidence' | 'reasoning', CerPartState>>({
+    claim: { inputType: 'text', sampleAnswer: '', options: ['', ''], correctIndex: 0 },
+    evidence: { inputType: 'text', sampleAnswer: '', options: ['', ''], correctIndex: 0 },
+    reasoning: { inputType: 'text', sampleAnswer: '', options: ['', ''], correctIndex: 0 },
+  });
+
   useEffect(() => {
     // When card type changes, update the default bloom level
     setBloomLevel(DEFAULT_BLOOM_BY_FORMAT[cardType] || 'Remember');
@@ -110,6 +127,13 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
     setTier2Question('');
     setTier2Options(['', '', '', '']);
     setTier2CorrectIndex(0);
+    setCerScenario('');
+    setCerQuestion('');
+    setCerParts({
+        claim: { inputType: 'text', sampleAnswer: '', options: ['', ''], correctIndex: 0 },
+        evidence: { inputType: 'text', sampleAnswer: '', options: ['', ''], correctIndex: 0 },
+        reasoning: { inputType: 'text', sampleAnswer: '', options: ['', ''], correctIndex: 0 },
+    });
   };
 
   const handleSave = () => {
@@ -243,6 +267,31 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
             } as SequencingCard;
             break;
             
+        case 'CER':
+            const finalCerParts: CERPart[] = (Object.keys(cerParts) as Array<keyof typeof cerParts>).map(key => {
+                const part = cerParts[key];
+                const finalPart: CERPart = { key, inputType: part.inputType };
+                if (part.inputType === 'text') {
+                    finalPart.sampleAnswer = part.sampleAnswer;
+                } else {
+                    finalPart.options = part.options.filter(o => o.trim());
+                    finalPart.correctIndex = part.correctIndex;
+                }
+                return finalPart;
+            });
+
+            newCard = {
+                id: crypto.randomUUID(),
+                cardFormat: 'CER',
+                questionStem: cerQuestion,
+                prompt: cerScenario,
+                question: cerQuestion,
+                parts: finalCerParts,
+                topic: 'Manual',
+                bloomLevel,
+            } as CERCard;
+            break;
+
         default:
             alert("This card type hasn't been implemented yet.");
             return;
@@ -320,6 +369,23 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
   const addSequenceItem = () => setSequenceItems([...sequenceItems, '']);
   
   const removeSequenceItem = (index: number) => setSequenceItems(sequenceItems.filter((_, i) => i !== index));
+
+  const handleCerPartChange = (part: keyof typeof cerParts, field: keyof CerPartState, value: any) => {
+    setCerParts(prev => ({
+        ...prev,
+        [part]: {
+            ...prev[part],
+            [field]: value
+        }
+    }));
+  };
+
+  const handleCerOptionChange = (part: keyof typeof cerParts, index: number, value: string) => {
+    const newOptions = [...cerParts[part].options];
+    newOptions[index] = value;
+    handleCerPartChange(part, 'options', newOptions);
+  };
+
   
   const isTwoColumn = cardType === 'Compare/Contrast' || cardType === 'Drag and Drop Sorting';
 
@@ -368,7 +434,7 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
                       <SelectLabel className="flex items-center gap-2">
                         <span className="text-lg">🧪</span> Evaluate / Create
                       </SelectLabel>
-                      <SelectItem value="CER" disabled>Claim-Evidence-Reasoning</SelectItem>
+                      <SelectItem value="CER">Claim-Evidence-Reasoning</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>
@@ -661,6 +727,77 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
                         </Button>
                     </div>
                 </div>
+              )}
+
+              {cardType === 'CER' && (
+                  <div className='space-y-4'>
+                      <div>
+                          <Label htmlFor="cer-scenario">Scenario / Prompt</Label>
+                          <Textarea id="cer-scenario" value={cerScenario} onChange={e => setCerScenario(e.target.value)} />
+                      </div>
+                      <div>
+                          <Label htmlFor="cer-question">Question</Label>
+                          <Textarea id="cer-question" value={cerQuestion} onChange={e => setCerQuestion(e.target.value)} />
+                      </div>
+                      <Separator />
+                      <h3 className="font-semibold">Answer Components</h3>
+                      {(Object.keys(cerParts) as Array<keyof typeof cerParts>).map((partKey) => (
+                          <Card key={partKey} className="p-4 bg-muted/50">
+                              <CardTitle className="capitalize text-base mb-2">{partKey}</CardTitle>
+                              <CardContent className="p-0 space-y-4">
+                                  <RadioGroup
+                                    value={cerParts[partKey].inputType}
+                                    onValueChange={(v) => handleCerPartChange(partKey, 'inputType', v)}
+                                    className="flex gap-4"
+                                  >
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="text" id={`${partKey}-text`} />
+                                        <Label htmlFor={`${partKey}-text`}>Free Text</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="mcq" id={`${partKey}-mcq`} />
+                                        <Label htmlFor={`${partKey}-mcq`}>Multiple Choice</Label>
+                                    </div>
+                                  </RadioGroup>
+
+                                  {cerParts[partKey].inputType === 'text' ? (
+                                      <div>
+                                          <Label htmlFor={`${partKey}-sample`}>Sample Answer</Label>
+                                          <Textarea id={`${partKey}-sample`} value={cerParts[partKey].sampleAnswer} onChange={(e) => handleCerPartChange(partKey, 'sampleAnswer', e.target.value)} />
+                                      </div>
+                                  ) : (
+                                      <div className='space-y-2'>
+                                          {cerParts[partKey].options.map((opt, i) => (
+                                              <div key={i}>
+                                                  <Label htmlFor={`${partKey}-opt-${i}`}>Option {i + 1}</Label>
+                                                  <Input id={`${partKey}-opt-${i}`} value={opt} onChange={e => handleCerOptionChange(partKey, i, e.target.value)} />
+                                              </div>
+                                          ))}
+                                          <Button variant="outline" size="sm" onClick={() => handleCerPartChange(partKey, 'options', [...cerParts[partKey].options, ''])}>
+                                              <PlusCircle className="mr-2 h-4 w-4" /> Add Option
+                                          </Button>
+                                          <div>
+                                              <Label htmlFor={`${partKey}-correct`}>Correct Option</Label>
+                                              <Select
+                                                value={String(cerParts[partKey].correctIndex)}
+                                                onValueChange={v => handleCerPartChange(partKey, 'correctIndex', Number(v))}
+                                              >
+                                                <SelectTrigger id={`${partKey}-correct`}>
+                                                    <SelectValue placeholder="Select correct answer" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {cerParts[partKey].options.map((opt, i) => (
+                                                        opt.trim() && <SelectItem key={i} value={String(i)}>Option {i + 1}: {opt}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                              </Select>
+                                          </div>
+                                      </div>
+                                  )}
+                              </CardContent>
+                          </Card>
+                      ))}
+                  </div>
               )}
           </div>
           
