@@ -20,6 +20,7 @@ import type {
   PurchaseCounts,
   UserDeckProgress,
   UserXpStats,
+  Topic,
 } from '@/stitch/types';
 import {
   Loader2,
@@ -243,14 +244,14 @@ export default function StarredPage() {
 
             setDeckProgress(progress);
             setXpStats(stats);
-            const foundDeck = topics.flatMap(t => t.decks).find(d => d.id === deckId);
+            const foundDeck = topics.flatMap((t: Topic) => t.decks).find((d: Deck) => d.id === deckId);
 
             if (!foundDeck) {
                 router.push('/decks');
                 return;
             }
             setDeck(foundDeck);
-            setStarredCards(foundDeck.cards.filter(c => c.isStarred));
+            setStarredCards(foundDeck.cards.filter((c: Flashcard) => c.isStarred));
             setIsLoading(false);
         };
         fetchStarredData();

@@ -101,7 +101,7 @@ export default function TopicTrekPage() {
                                 )}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                onClick={() => setSelectedTopic(topic)}
+                                onClick={() => setSelectedTopic(topic ?? null)}
                               >
                                 {topic}
                               </motion.button>

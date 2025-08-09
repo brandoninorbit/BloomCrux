@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Target, Check, PartyPopper } from 'lucide-react';
-import type { Deck, CardAttempt, BloomLevel, Flashcard, UserPowerUps, PowerUpType, PurchaseCounts, UserDeckProgress, UserXpStats, StandardMCQCard } from '@/stitch/types';
+import type { Deck, CardAttempt, BloomLevel, Flashcard, UserPowerUps, PowerUpType, PurchaseCounts, UserDeckProgress, UserXpStats, StandardMCQCard, Topic } from '@/stitch/types';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
 import { getTopics, getDeckProgress, logCardAttempt, purchasePowerUp, getDeckPurchaseCounts, getUserDeckProgress, getUserXpStats } from '@/lib/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -219,7 +219,7 @@ export default function PracticePage() {
         
         setDeckProgress(progress);
         setXpStats(stats);
-        const foundDeck = topics.flatMap(t => t.decks).find(d => d.id === deckId);
+        const foundDeck = topics.flatMap((t: Topic) => t.decks).find((d: Deck) => d.id === deckId);
         
         if (!foundDeck) {
             router.push('/decks');
@@ -227,10 +227,10 @@ export default function PracticePage() {
         }
         setDeck(foundDeck);
         
-        const deckAttempts = attempts.filter(a => a.deckId === deckId);
+        const deckAttempts = attempts.filter((a: CardAttempt) => a.deckId === deckId);
         
         const levels: Record<string, { correct: number, total: number }> = {};
-        deckAttempts.forEach(attempt => {
+        deckAttempts.forEach((attempt: CardAttempt) => {
             if (!levels[attempt.bloomLevel]) levels[attempt.bloomLevel] = { correct: 0, total: 0 };
             levels[attempt.bloomLevel].total++;
             if (attempt.wasCorrect) levels[attempt.bloomLevel].correct++;
@@ -242,7 +242,7 @@ export default function PracticePage() {
             .map(([level, _]) => level)
         );
 
-        const cardsToPractice = foundDeck.cards.filter(c => weakLevels.has(c.bloomLevel));
+        const cardsToPractice = foundDeck.cards.filter((c: Flashcard) => weakLevels.has(c.bloomLevel));
         setWeakCards(cardsToPractice);
         setIsLoading(false);
     }, [user, deckId, router]);

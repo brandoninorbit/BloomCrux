@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getTopics, logCardAttempt, purchasePowerUp, getDeckPurchaseCounts, saveUserDeckProgress, getUserDeckProgress, getUserXpStats } from "@/lib/firestore";
-import type { Deck, Flashcard, StandardMCQCard, UserPowerUps, PowerUpType, PurchaseCounts, UserDeckProgress, UserXpStats } from "@/stitch/types";
+import type { Deck, Flashcard, StandardMCQCard, UserPowerUps, PowerUpType, PurchaseCounts, UserDeckProgress, UserXpStats, Topic } from "@/stitch/types";
 import { useUserAuth } from "@/app/Providers/AuthProvider";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Loader2, PartyPopper } from "lucide-react";
@@ -76,7 +76,7 @@ export default function RemixStudyPage() {
             setXpStats(stats);
             setPurchaseCounts(counts);
 
-            const foundDeck = topics.flatMap(t => t.decks).find(d => d.id === deckId);
+            const foundDeck = topics.flatMap((t: Topic) => t.decks).find((d: Deck) => d.id === deckId);
             
             if (foundDeck) {
                 setDeck(foundDeck);
@@ -100,10 +100,10 @@ export default function RemixStudyPage() {
                     if (isNewRemix && progress) progress.streak = 0;
                     // Start new remix session
                     const shuffledAll = shuffleArray(foundDeck.cards);
-                    const missionCards = shuffledAll.slice(0, MISSION_LENGTH);
-                    const newCardOrder = missionCards.map(c => String(c.id));
+                    const missionCards: Flashcard[] = shuffledAll.slice(0, MISSION_LENGTH);
+                    const newCardOrder = missionCards.map((c: Flashcard) => String(c.id));
                     setSessionOrder(newCardOrder);
-                    cardsForSession = missionCards;
+                    cardsForSession = missionCards as Flashcard[];
                     if(user) {
                       await saveUserDeckProgress(user.uid, deckId, { lastCardIndex: 0, mode: 'remix', randomOrder: newCardOrder, streak: 0 });
                     }
