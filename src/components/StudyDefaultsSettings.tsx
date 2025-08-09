@@ -1,4 +1,3 @@
-const bloomOrder = ["Remember","Understand","Apply","Analyze","Evaluate","Create"] as const;
 
 'use client';
 
@@ -10,6 +9,8 @@ import { Separator } from './ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Input } from "./ui/input";
 import { Switch } from "./ui/switch";
+
+const bloomOrder = ["Remember","Understand","Apply","Analyze","Evaluate","Create"] as const;
 
 export default function StudyDefaultsSettings() {
   const { settings, updateSettings, loading } = useUserSettings();
@@ -105,8 +106,3 @@ export default function StudyDefaultsSettings() {
     </div>
   );
 }
-
-
-
-
-
