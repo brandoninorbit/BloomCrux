@@ -36,29 +36,31 @@ const transformRowToCard = (row: any): Flashcard | null => {
     const cardType = row.CardType as CardFormat;
     if (!cardType) return null;
 
+    let questionText = row.Question || row.Prompt || row.Title || '';
+    let bloomLevel: BloomLevel = 'Remember'; // Default Bloom Level
+
+    // Override Bloom's Level if specified in the question
+    const bloomMatch = questionText.match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i);
+    if (bloomMatch) {
+        bloomLevel = bloomMatch[1] as BloomLevel;
+        questionText = questionText.replace(bloomMatch[0], '').trim();
+    }
+
     const baseCard: Partial<Flashcard> = {
         id: crypto.randomUUID(), // Generate a temporary unique ID
-        questionStem: row.Question || row.Prompt || row.Title || '',
+        questionStem: questionText,
         topic: 'Imported', // Default topic
-        bloomLevel: 'Remember', // Default Bloom Level
+        bloomLevel: bloomLevel,
         cardFormat: cardType,
         isStarred: false,
     };
-    
-    // Override Bloom's Level if specified in the question
-    const bloomMatch = baseCard.questionStem.match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/);
-    if (bloomMatch) {
-        baseCard.bloomLevel = bloomMatch[1] as any;
-        baseCard.questionStem = baseCard.questionStem.replace(bloomMatch[0], '').trim();
-    }
-
 
     switch (cardType) {
         case 'Standard MCQ':
             return {
                 ...baseCard,
                 tier1: {
-                    question: row.Question,
+                    question: questionText,
                     options: [row.A, row.B, row.C, row.D].filter(Boolean),
                     correctAnswerIndex: ['A', 'B', 'C', 'D'].indexOf(row.Answer),
                     distractorRationale: { explanation: row.Explanation }
@@ -68,7 +70,7 @@ const transformRowToCard = (row: any): Flashcard | null => {
              return {
                 ...baseCard,
                 tier1: {
-                    question: row.Question,
+                    question: questionText,
                     options: [row.A, row.B, row.C, row.D].filter(Boolean),
                     correctAnswerIndex: ['A', 'B', 'C', 'D'].indexOf(row.Answer),
                 },
@@ -81,13 +83,13 @@ const transformRowToCard = (row: any): Flashcard | null => {
         case 'Fill in the Blank':
             return {
                 ...baseCard,
-                prompt: row.Question,
+                prompt: questionText,
                 correctAnswer: row.Answer
             } as Flashcard;
         case 'Short Answer':
             return {
                 ...baseCard,
-                prompt: row.Question,
+                prompt: questionText,
                 suggestedAnswer: row.SuggestedAnswer
             } as Flashcard;
         case 'Compare/Contrast':
@@ -108,7 +110,7 @@ const transformRowToCard = (row: any): Flashcard | null => {
             const categories = Array.from(new Set(items.map(i => i.correctCategory)));
             return {
                 ...baseCard,
-                prompt: row.Title,
+                prompt: questionText,
                 items,
                 categories,
             } as Flashcard;
@@ -116,7 +118,7 @@ const transformRowToCard = (row: any): Flashcard | null => {
             const seqItems = (row.Items || '').split('|');
             return {
                 ...baseCard,
-                prompt: row.Prompt,
+                prompt: questionText,
                 items: seqItems,
                 correctOrder: seqItems,
             } as Flashcard;
@@ -130,12 +132,12 @@ const transformRowToCard = (row: any): Flashcard | null => {
                     return { key, inputType: 'mcq', options: rest, correctIndex };
                 }
                 return null;
-            }).filter(Boolean);
+            }).filter((p): p is CERPart => p !== null);
 
             return {
                 ...baseCard,
                 prompt: row.Scenario,
-                question: row.Question,
+                question: questionText,
                 parts,
             } as Flashcard;
         default:
@@ -345,9 +347,11 @@ export default function EditDeckPage() {
     const bloomOrder: BloomLevel[] = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'];
 
     const getGroupKey = (card: Flashcard): string => {
-        const rawKey = sortOrder === 'Bloom\'s Level' ? card.bloomLevel : card.cardFormat;
-        // Handle potential undefined or null keys, although TS types should prevent this.
-        return String(rawKey || 'Uncategorized');
+        if (sortOrder === 'Bloom\'s Level') {
+            const bloomMatch = (card.questionStem || '').match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i);
+            return bloomMatch ? bloomMatch[1] : card.bloomLevel || 'Uncategorized';
+        }
+        return card.cardFormat || 'Uncategorized';
     };
 
     const grouped = cards.reduce((acc, card) => {
@@ -366,12 +370,12 @@ export default function EditDeckPage() {
                 orderedGroup[level] = grouped[level];
             }
         });
-        // Add any cards that might have had a weird bloomLevel value
+        // Add any cards that might have had a weird bloomLevel value but were not in the predefined order
         Object.keys(grouped).forEach(key => {
             if (!orderedGroup[key]) {
                 orderedGroup[key] = grouped[key];
             }
-        })
+        });
         return orderedGroup;
     }
 
@@ -399,14 +403,18 @@ export default function EditDeckPage() {
   
   const renderCard = (card: Flashcard) => {
     let prefix = '';
-    // This prefixing logic seems incorrect for grouped view, but let's keep it for now.
-    // The group header should be the primary indicator.
+    if (sortOrder === 'Bloom\'s Level') {
+      const bloomMatch = (card.questionStem || '').match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i);
+      prefix = bloomMatch ? bloomMatch[0] : `[${card.bloomLevel}]`;
+    } else if (sortOrder === 'Card Format') {
+      prefix = `[${card.cardFormat}]`;
+    }
     
     return (
         <Card key={card.id}>
             <CardContent className="p-4 flex justify-between items-center">
                 <div>
-                    <p className="font-semibold">{card.questionStem}</p>
+                    <p className="font-semibold"><span className="text-muted-foreground mr-2">{prefix}</span>{card.questionStem.replace(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i, '').trim()}</p>
                     <p className="text-sm text-muted-foreground">{card.cardFormat}</p>
                 </div>
                 <div className="flex gap-1">
