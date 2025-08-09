@@ -66,8 +66,11 @@ function colorToClass(color: string = "blue") {
 
 function FolderCard({ folder, onEdit, onClick }: { folder: FolderSummary, onEdit: (e: React.MouseEvent) => void, onClick: () => void }) {
   return (
-    <button
+    <div
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick()}
       className="group w-full text-left bg-white rounded-2xl shadow-md p-5 flex items-center gap-5
                  transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg
                  focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
@@ -88,7 +91,7 @@ function FolderCard({ folder, onEdit, onClick }: { folder: FolderSummary, onEdit
       <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 hover:bg-blue-100 hover:text-blue-600" onClick={onEdit}>
         <Pencil className="h-4 w-4" />
       </Button>
-    </button>
+    </div>
   );
 }
 
