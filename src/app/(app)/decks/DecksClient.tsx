@@ -23,6 +23,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 
 /** Local, file-scoped mocks (used only when logged out) */
@@ -56,7 +57,7 @@ function FolderCard({ folder, onEdit }: { folder: FolderSummary, onEdit: () => v
   return (
     <div
       className="group w-full text-left bg-white rounded-2xl shadow-md p-5 flex items-center gap-5
-                 transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-md
+                 transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg
                  focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
     >
       <div
@@ -159,6 +160,16 @@ export default function DecksClient() {
 
   const loading = user && (decks === null || folders === null);
 
+  const gridParentVariants = {
+    hidden: {},
+    show: { transition: { staggerChildren: 0.06 } },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, scale: 0.96, y: 6 },
+    show:   { opacity: 1, scale: 1,    y: 0 },
+  };
+
   return (
     <main className="py-8 relative">
       <div className="w-full flex justify-center">
@@ -176,7 +187,14 @@ export default function DecksClient() {
               {loading ? (
                 <SkeletonRow />
               ) : decks && decks.length > 0 ? (
-                <DeckGrid decks={decks} />
+                 <motion.div
+                    variants={gridParentVariants}
+                    initial="hidden"
+                    animate="show"
+                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+                 >
+                    <DeckGrid decks={decks} />
+                 </motion.div>
               ) : (
                 <p className="text-muted-foreground">{user ? "No recent decks." : ""}</p>
               )}
@@ -187,15 +205,27 @@ export default function DecksClient() {
               {loading ? (
                 <SkeletonRow />
               ) : folders && folders.length > 0 ? (
-                 <div ref={folderGridRef} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                 <motion.div 
+                    ref={folderGridRef}
+                    variants={gridParentVariants}
+                    initial="hidden"
+                    animate="show"
+                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"
+                 >
                     {folders.map((f) => (
-                      <FolderCard
+                      <motion.div
                         key={f.id}
-                        folder={f}
-                        onEdit={() => setEditingFolder(f)}
-                      />
+                        variants={itemVariants}
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <FolderCard
+                          folder={f}
+                          onEdit={() => setEditingFolder(f)}
+                        />
+                      </motion.div>
                     ))}
-                  </div>
+                  </motion.div>
               ) : (
                 <p className="text-muted-foreground">{user ? "No folders created yet." : ""}</p>
               )}

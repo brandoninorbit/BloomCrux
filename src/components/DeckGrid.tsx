@@ -7,6 +7,7 @@ import { Pencil, Trash2, BookOpen } from "lucide-react";
 import { Button } from "./ui/button";
 import { useEffect, useRef } from 'react';
 import autoAnimate from '@formkit/auto-animate';
+import { motion } from "framer-motion";
 
 // The component now accepts DeckSummary to match the client
 export function DeckGrid({ decks }: { decks: (StitchDeck | DeckSummary)[] }) {
@@ -22,11 +23,19 @@ export function DeckGrid({ decks }: { decks: (StitchDeck | DeckSummary)[] }) {
     alert(`Delete action for deck ${deckId}`);
   };
 
+  const itemVariants = {
+    hidden: { opacity: 0, scale: 0.96, y: 6 },
+    show:   { opacity: 1, scale: 1,    y: 0 },
+  };
+
   return (
-    <div ref={parent} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+    <>
       {decks.map((d) => (
-        <div
+        <motion.div
           key={d.id}
+          variants={itemVariants}
+          whileHover={{ y: -2 }}
+          transition={{ type: "spring", stiffness: 220, damping: 18 }}
           className="group perspective-1000 block"
         >
           <div className="relative w-full aspect-[3/4] bg-white rounded-xl shadow-md transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-1.5 flex flex-col justify-between">
@@ -54,8 +63,8 @@ export function DeckGrid({ decks }: { decks: (StitchDeck | DeckSummary)[] }) {
             </div>
 
           </div>
-        </div>
+        </motion.div>
       ))}
-    </div>
+    </>
   );
 }
