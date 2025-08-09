@@ -170,8 +170,8 @@ export default function SequencingCard({
         {submitted && (
            <p className="text-lg font-medium">
              {items.every((item, i) => item === correctOrder[i])
-                ? "Ã¢Å“â€¦ Correct! Well done."
-                : "Ã¢ÂÅ’ Some items are out of order."}
+                ? "✅ Correct! Well done."
+                : "❌ Some items are out of order."}
            </p>
         )}
       </div>
