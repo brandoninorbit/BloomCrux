@@ -147,8 +147,8 @@ export default function DashboardClient() {
             }
             
             const finalProgress = Object.values(progressByDeck).sort((a,b) => {
-                const aTime = a.lastStudied instanceof Date ? a.lastStudied.getTime() : new Date(a.lastStudied).getTime();
-                const bTime = b.lastStudied instanceof Date ? b.lastStudied.getTime() : new Date(b.lastStudied).getTime();
+                const aTime = (a.lastStudied instanceof Date ? a.lastStudied : (a.lastStudied as Timestamp).toDate()).getTime();
+                const bTime = (b.lastStudied instanceof Date ? b.lastStudied : (b.lastStudied as Timestamp).toDate()).getTime();
                 return bTime - aTime;
             });
 
@@ -417,3 +417,5 @@ export default function DashboardClient() {
         </div>
     );
 }
+
+    

@@ -3,14 +3,25 @@ import { addDays } from 'date-fns';
 
 const MIN_EASE_FACTOR = 1.3;
 
-export function getNextReviewDate(recall: RecallLevel, currentInterval: number, currentEaseFactor: number) {
+function normRecall(r: RecallLevel | number): RecallLevel {
+  if (typeof r === 'number') {
+    if (r <= 0) return 'hard';
+    if (r === 1) return 'medium';
+    return 'easy';
+  }
+  return r;
+}
+
+export function getNextReviewDate(recall: RecallLevel | number, currentInterval: number, currentEaseFactor: number) {
   let newEaseFactor = currentEaseFactor;
   let newInterval: number;
 
-  if (recall === 'hard') {
+  const normalizedRecall = normRecall(recall);
+
+  if (normalizedRecall === 'hard') {
     newEaseFactor = Math.max(MIN_EASE_FACTOR, currentEaseFactor - 0.2);
     newInterval = 1; // Show again soon
-  } else if (recall === 'medium') {
+  } else if (normalizedRecall === 'medium') {
     // Ease factor remains the same
     newInterval = Math.round(currentInterval * newEaseFactor);
   } else { // 'easy'
@@ -19,15 +30,15 @@ export function getNextReviewDate(recall: RecallLevel, currentInterval: number, 
   }
 
   // First review after a fail is always 1 day
-  if (recall === 'hard' && currentInterval > 1) {
+  if (normalizedRecall === 'hard' && currentInterval > 1) {
     newInterval = 1;
   }
   
   // For the very first review of a card
   if (currentInterval === 0) {
-      if (recall === 'hard') newInterval = 0;
-      if (recall === 'medium') newInterval = 1;
-      if (recall === 'easy') newInterval = 4;
+      if (normalizedRecall === 'hard') newInterval = 0;
+      if (normalizedRecall === 'medium') newInterval = 1;
+      if (normalizedRecall === 'easy') newInterval = 4;
   }
 
 
@@ -40,5 +51,4 @@ export function getNextReviewDate(recall: RecallLevel, currentInterval: number, 
   };
 }
 
-
-
+    
