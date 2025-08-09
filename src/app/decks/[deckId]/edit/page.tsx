@@ -206,6 +206,32 @@ const transformRowToCard = (row: any): Flashcard | null => {
     }
 };
 
+const getDisplayQuestion = (card: Flashcard) => {
+  const stem = (card.questionStem ?? '').trim();
+  if (stem) return stem;
+
+  switch (card.cardFormat) {
+    case 'Compare/Contrast':
+      // if itemA/B exist, show a sensible label
+      // @ts-ignore – if your type doesn’t include itemA/B, cast as any
+      return `${(card as any).itemA ?? ''} vs ${(card as any).itemB ?? ''}`.trim() || 'Compare/Contrast';
+    case 'Drag and Drop Sorting':
+      // @ts-ignore
+      return (card as any).prompt ?? (card as any).title ?? 'Drag and Drop';
+    case 'Sequencing':
+      // @ts-ignore
+      return (card as any).prompt ?? 'Sequencing';
+    case 'Fill in the Blank':
+      // @ts-ignore
+      return (card as any).prompt ?? 'Fill in the Blank';
+    case 'CER':
+      // @ts-ignore
+      return (card as any).question ?? 'CER';
+    default:
+      return 'Untitled';
+  }
+};
+
 
 export default function EditDeckPage() {
   const { deckId } = useParams() as { deckId: string };
@@ -544,7 +570,8 @@ export default function EditDeckPage() {
     }
     
     // Remove the bracketed prefix from the question stem if it exists for display
-    const displayQuestion = (card.questionStem || '').replace(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]\s*/i, '');
+    const displayQuestion = getDisplayQuestion(card)
+      .replace(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]\s*/i, '');
 
     return (
         <Card key={card.id}>
