@@ -43,7 +43,7 @@ const get = (row: any, ...names: string[]) => {
   return '';
 };
 
-const normBloom = (s: string): BloomLevel | null => {
+const normalizeBloom = (s: string): BloomLevel | null => {
   const m = s.trim().toLowerCase();
   if (m === 'remember') return 'Remember';
   if (m === 'understand') return 'Understand';
@@ -54,17 +54,35 @@ const normBloom = (s: string): BloomLevel | null => {
   return null;
 };
 
+// find a bloom column even if it’s named weirdly
+const pickBloomFromRow = (row: any): string => {
+  const keys = Object.keys(row);
+  // strong candidates first
+  const exacts = [
+    'bloom', "bloom's level", 'bloom’s level', 'bloom level',
+    'bloomlevel', 'blooms level', 'bloomslevel', 'bloom taxonomy level'
+  ];
+  for (const k of exacts) if (row[k] != null && String(row[k]).trim() !== '') return String(row[k]);
+
+  // fallback: any header containing "bloom"
+  const loose = keys.find(k => k.includes('bloom'));
+  return loose ? String(row[loose]) : '';
+};
+
+
 // Function to transform a parsed CSV row into a Flashcard object
 const transformRowToCard = (row: any): Flashcard | null => {
     // row.* keys are lowercase now
     const cardType = get(row, 'cardtype', 'card type', 'format', 'type') as CardFormat;
     if (!cardType) return null;
 
-    let questionText = get(row, 'question', 'prompt', 'title');
+    let questionText = get(row, 'question', 'prompt', 'title', 'stem', 'question stem');
 
-    const csvBloom = get(row, 'bloom', "bloom's level", 'bloom’s level', 'bloomlevel', 'blooms level');
+    // 1) Column value if present
+    const csvBloomRaw = pickBloomFromRow(row);
+    // 2) Bracket in the text (supports all six levels)
     const bracket = (questionText.match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i)?.[1] ?? '');
-    const bloomLevel = (normBloom(csvBloom) ?? normBloom(bracket) ?? 'Remember') as BloomLevel;
+    const bloomLevel = (normalizeBloom(csvBloomRaw) ?? normalizeBloom(bracket) ?? 'Remember') as BloomLevel;
     if (bracket) questionText = questionText.replace(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]\s*/i, '').trim();
 
 
