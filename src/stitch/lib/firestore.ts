@@ -16,6 +16,7 @@
 
 
 
+
 import { collection, getDocs, query, where, addDoc, serverTimestamp, Timestamp, doc, setDoc, getDoc, runTransaction, writeBatch, increment, deleteDoc, onSnapshot, Unsubscribe, collectionGroup, orderBy, limit } from 'firebase/firestore';
 import { getDb, getFirebaseStorage, getFirebaseAuth } from './firebase';
 import type { Flashcard, CardAttempt, Topic, UserDeckProgress, UserPowerUps, Deck, BloomLevel, PowerUpType, PurchaseCounts, GlobalProgress, ShopItem, UserInventory, UserXpStats, UserCustomizations, SelectedCustomizations, UserSettings } from '../types';
@@ -25,6 +26,7 @@ import { getStreakBonus } from './xp';
 import { toast } from '@/hooks/use-toast';
 import { type User, updateProfile } from 'firebase/auth';
 import { avatarFrames } from '@/config/avatarFrames';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 /**
  * Recursively removes keys with `undefined` values from an object or an array of objects.
@@ -56,9 +58,9 @@ function sanitizeForFirestore<T>(obj: T): T {
 
 /**
  * Fetches all topics and their decks for a given user.
- * Cards are now fetched from a subcollection for each deck.
+ * This is optimized to NOT fetch the cards within each deck.
  * @param userId The ID of the user whose topics to fetch.
- * @returns A promise that resolves to an array of Topic objects, with cards populated.
+ * @returns A promise that resolves to an array of Topic objects.
  */
 export async function getTopics(userId: string): Promise<Topic[]> {
     const db = getDb();
@@ -67,20 +69,7 @@ export async function getTopics(userId: string): Promise<Topic[]> {
 
     if (docSnap.exists()) {
         const topicsData = docSnap.data().topics || [];
-
-        // For each deck, fetch its cards from the subcollection
-        for (const topic of topicsData) {
-            if (topic.decks && topic.decks.length > 0) {
-                for (const deck of topic.decks) {
-                    const cardsQuery = query(collection(db, 'userTopics', userId, 'decks', deck.id, 'cards'));
-                    const cardsSnap = await getDocs(cardsQuery);
-                    deck.cards = cardsSnap.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    } as Flashcard));
-                }
-            }
-        }
+        // The cards are not fetched here anymore. They are loaded on-demand.
         return topicsData;
     } else {
         // No topics document for this user yet
@@ -780,3 +769,5 @@ export async function saveSelectedCustomizations(userId: string, selections: Par
     const docRef = doc(db, 'users', userId, 'customizations', 'selected');
     await setDoc(docRef, sanitizeForFirestore(selections), { merge: true });
 }
+
+    

@@ -37,6 +37,7 @@ export default function DecksPage() {
         return;
       }
       try {
+        // This getTopics call is now optimized and won't fetch cards.
         const t = await getTopics(user.uid);
         if (on) setTopics(t ?? []);
       } catch {
@@ -176,3 +177,5 @@ function DeckGrid({ decks }: { decks: StitchDeck[] }) {
     </div>
   );
 }
+
+    
