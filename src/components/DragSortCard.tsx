@@ -28,8 +28,8 @@ function DraggableItem({ item, isSubmitted, isCorrect }: { item: DndItem, isSubm
   });
 
   // This applies the transform style during dragging.
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+  const style = transform && isDragging
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 10 }
     : undefined;
 
   return (
@@ -39,7 +39,7 @@ function DraggableItem({ item, isSubmitted, isCorrect }: { item: DndItem, isSubm
       {...listeners}
       {...attributes}
       className={cn(`mb-2 p-3 border rounded-md shadow-sm transition-all`,
-        isDragging && "bg-primary text-primary-foreground shadow-lg z-10",
+        isDragging && "bg-primary text-primary-foreground shadow-lg",
         !isSubmitted && "bg-card",
         isSubmitted && isCorrect === true && "bg-green-50 border-green-500",
         isSubmitted && isCorrect === false && "bg-red-50 border-red-500",

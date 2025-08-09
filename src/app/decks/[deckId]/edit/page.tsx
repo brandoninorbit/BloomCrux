@@ -805,7 +805,7 @@ export default function EditDeckPage() {
       />
       
       <AlertDialog open={!!previewingCard} onOpenChange={(open) => !open && setPreviewingCard(null)}>
-          <AlertDialogContent className="sm:max-w-2xl">
+          <AlertDialogContent className={cn("sm:max-w-lg", previewingCard?.cardFormat === 'Drag and Drop Sorting' && "sm:max-w-2xl")}>
               <AlertDialogHeader>
                   <AlertDialogTitle>Card Preview</AlertDialogTitle>
                    <AlertDialogDescription>
