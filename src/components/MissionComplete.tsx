@@ -90,11 +90,11 @@ export default function MissionComplete({
                 transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
               />
               <div className="absolute inset-0 rounded-full bg-blue-400/25 blur-xl" />
-              <div className="absolute inset-1 rounded-full ring-2 ring-blue-200" />
-              <div className="relative w-full h-full rounded-full bg-blue-50 flex items-center justify-center shadow-[0_10px_20px_rgba(30,64,175,0.12)]">
-                <svg className="w-12 h-12 text-blue-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+              <div className="absolute inset-1 rounded-full ring-2 ring-blue-200 dark:ring-blue-900/50" />
+              <div className="relative w-full h-full rounded-full bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center shadow-[0_10px_20px_rgba(30,64,175,0.12)]">
+                <svg className="w-12 h-12 text-blue-700 dark:text-blue-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                   <path d="M8 21h8M12 17v4M7 4h10v3a5 5 0 0 1-10 0V4Z" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M17 7h2a2 2 0 0 1-2 2M7 7H5a2 2 0 0 0 2 2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M7 7H5a2 2 0 0 0 2 2M17 7h2a2 2 0 0 1-2 2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
             </div>
