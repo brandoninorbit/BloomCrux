@@ -11,6 +11,7 @@ import MissionCard from '@/components/MissionCard';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 const missionTabs = [
     { key: 'quest', label: 'Quest', icon: CaseUpper },
@@ -107,11 +108,17 @@ export default function StudyHubPage() {
             <header className="border-b bg-white">
                 <nav className="container mx-auto px-6 flex items-center gap-6">
                     {missionTabs.map(tab => (
-                        <Link key={tab.key} href={`/decks/${deckId}/study/${tab.key}`} legacyBehavior>
-                           <a className="flex items-center gap-2 py-4 border-b-2 border-transparent text-muted-foreground hover:text-primary hover:border-primary transition-colors">
-                                <tab.icon className="h-4 w-4"/>
-                                <span className="text-sm font-medium">{tab.label}</span>
-                           </a>
+                       <Link
+                          key={tab.key}
+                          href={`/decks/${deckId}/study/${tab.key}`}
+                          className={cn(
+                            "flex items-center gap-2 py-4 border-b-2 border-transparent text-muted-foreground hover:text-primary hover:border-primary transition-colors",
+                            // Example of how to style the active tab
+                            // pathname.endsWith(tab.key) && "text-primary border-primary" 
+                          )}
+                        >
+                          <tab.icon className="h-4 w-4" />
+                          <span className="text-sm font-medium">{tab.label}</span>
                         </Link>
                     ))}
                 </nav>
