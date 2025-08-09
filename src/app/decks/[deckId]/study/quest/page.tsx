@@ -192,10 +192,9 @@ export default function QuestStudyPage() {
   const handleLogAttempt = (card: Flashcard, wasCorrect: boolean) => {
     if (!user) return;
     
-    logCardAttempt({
-      userId: user.uid,
+    logCardAttempt(user.uid, {
       deckId: deckId,
-      cardId: card.id,
+      cardId: String(card.id),
       bloomLevel: card.bloomLevel,
       wasCorrect: wasCorrect,
       timestamp: new Date(),

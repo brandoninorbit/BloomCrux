@@ -12,6 +12,7 @@
 
 
 
+
 import { collection, getDocs, query, where, addDoc, serverTimestamp, Timestamp, doc, setDoc, getDoc, runTransaction, writeBatch, increment, deleteDoc, onSnapshot, Unsubscribe, collectionGroup, orderBy, limit } from 'firebase/firestore';
 import { getDb, getFirebaseStorage, getFirebaseAuth } from './firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -158,11 +159,13 @@ export async function saveTopics(userId: string, topics: Topic[]): Promise<void>
 /**
  * Logs a user's attempt at a flashcard and updates XP and levels.
  * This is now an atomic transaction.
+ * @param userId The user's ID.
  * @param attemptData The data for the card attempt.
  * @returns An object containing deck mastery status and awarded tokens, along with XP breakdown.
  */
 export async function logCardAttempt(
-    attemptData: Omit<CardAttempt, 'id'>
+    userId: string,
+    attemptData: Omit<CardAttempt, 'id' | 'userId'>
 ): Promise<{ deckMastered: boolean, awardedTokens: number, xpBreakdown: { base: number, streakBonus: number, weakCardBonus: number, recencyBonus: number } }> {
   const db = getDb();
   const TOKENS_PER_CORRECT_ANSWER = 5;
@@ -179,7 +182,7 @@ export async function logCardAttempt(
 
   try {
     await runTransaction(db, async (transaction) => {
-      const { userId, deckId, cardId, bloomLevel } = attemptData;
+      const { deckId, cardId, bloomLevel } = attemptData;
       
       const userTopicsDocRef = doc(db, 'userTopics', userId);
       const userSettingsDocRef = doc(db, 'users', userId);
@@ -226,7 +229,7 @@ export async function logCardAttempt(
 
 
       const newAttemptRef = doc(collection(db, 'cardAttempts'));
-      transaction.set(newAttemptRef, { ...attemptData, timestamp: serverTimestamp() });
+      transaction.set(newAttemptRef, { ...attemptData, userId, timestamp: serverTimestamp() });
 
       if (attemptData.wasCorrect) {
         awardedTokens = TOKENS_PER_CORRECT_ANSWER;
@@ -334,7 +337,7 @@ export async function logCardAttempt(
           const deckAttemptsQuery = query(collection(db, 'cardAttempts'), where("userId", "==", userId), where("deckId", "==", deckId));
           const allDeckAttemptsSnapshot = await getDocs(deckAttemptsQuery);
           const allAttempts: CardAttempt[] = allDeckAttemptsSnapshot.docs.map(d => d.data() as CardAttempt);
-          allAttempts.push({ ...attemptData, timestamp: new Date() } as CardAttempt);
+          allAttempts.push({ ...attemptData, userId, timestamp: new Date() } as CardAttempt);
           
           const bloomMastery: { [key in BloomLevel]?: { correct: number, total: number } } = {};
           const deckCards = cardsInDeckSnapshot.docs.map(d => d.data() as Flashcard);
@@ -806,7 +809,3 @@ export async function uploadProfilePhotoAndUpdateAuth(
   // 5) Return the fresh user
   return auth.currentUser!;
 }
-
-
-
-

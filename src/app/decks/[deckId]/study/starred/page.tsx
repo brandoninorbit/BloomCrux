@@ -103,7 +103,7 @@ function StarredStudySession({ cards, deck, onExit, initialDeckProgress, isXpBoo
     const handleLogAttempt = (card: Flashcard, wasCorrect: boolean) => {
         if (!user) return;
 
-        logCardAttempt({ userId: user.uid, deckId: deck.id, cardId: card.id, bloomLevel: card.bloomLevel, wasCorrect, timestamp: new Date() }).then(({ xpBreakdown }) => {
+        logCardAttempt(user.uid, { deckId: deck.id, cardId: String(card.id), bloomLevel: card.bloomLevel, wasCorrect, timestamp: new Date() }).then(({ xpBreakdown }) => {
             if (wasCorrect) {
                 let xpMessage = `+${xpBreakdown.base} XP (${card.bloomLevel})`;
                 if (xpBreakdown.streakBonus > 0) xpMessage += ` • +${xpBreakdown.streakBonus} XP (Streak)`;
@@ -183,7 +183,7 @@ function StarredStudySession({ cards, deck, onExit, initialDeckProgress, isXpBoo
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => router.push(`/decks/${deck.id}/study`)}>Back to Missions</AlertDialogCancel>
+                        <AlertDialogCancel onClick={() => router.push(`/decks/${deckId}/study`)}>Back to Missions</AlertDialogCancel>
                         <AlertDialogAction onClick={() => {
                             setShowCheckpoint(false);
                             proceedToNextCard();

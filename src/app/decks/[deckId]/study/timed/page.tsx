@@ -172,10 +172,9 @@ export default function TimedDrillPage() {
         return;
     }
 
-    logCardAttempt({
-      userId: user.uid,
+    logCardAttempt(user.uid, {
       deckId: deckId,
-      cardId: card.id,
+      cardId: String(card.id),
       bloomLevel: card.bloomLevel,
       wasCorrect: wasCorrect,
       timestamp: new Date(),
@@ -283,7 +282,7 @@ export default function TimedDrillPage() {
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => router.push(`/decks/${deck.id}/study`)}>Back to Missions</AlertDialogCancel>
+                    <AlertDialogCancel onClick={() => router.push(`/decks/${deckId}/study`)}>Back to Missions</AlertDialogCancel>
                     <AlertDialogAction onClick={() => {
                         setShowCheckpoint(false);
                         proceedToNextCard();

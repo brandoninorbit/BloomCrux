@@ -128,10 +128,9 @@ export default function RemixStudyPage() {
 
   const handleLogAttempt = (card: Flashcard, wasCorrect: boolean) => {
     if(user && deck) {
-        logCardAttempt({ 
-            userId: user.uid,
+        logCardAttempt(user.uid, { 
             deckId: deck.id, 
-            cardId: card.id, 
+            cardId: String(card.id),
             wasCorrect: wasCorrect,
             bloomLevel: card.bloomLevel,
             timestamp: new Date(),

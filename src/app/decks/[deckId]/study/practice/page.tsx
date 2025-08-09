@@ -76,7 +76,7 @@ function StudySession({ cards, deck, onExit, initialDeckProgress, isXpBoosted }:
     const handleLogAttempt = (card: Flashcard, wasCorrect: boolean) => {
         if (!user) return;
         
-        logCardAttempt({ userId: user.uid, deckId: deck.id, cardId: card.id, bloomLevel: card.bloomLevel, wasCorrect, timestamp: new Date() }).then(({ xpBreakdown }) => {
+        logCardAttempt(user.uid, { deckId: deck.id, cardId: String(card.id), bloomLevel: card.bloomLevel, wasCorrect, timestamp: new Date() }).then(({ xpBreakdown }) => {
             if (wasCorrect) {
                 let xpMessage = `+${xpBreakdown.base} XP (${card.bloomLevel})`;
                 if (xpBreakdown.streakBonus > 0) xpMessage += ` • +${xpBreakdown.streakBonus} XP (Streak)`;
