@@ -69,6 +69,16 @@ const pickBloomFromRow = (row: any): string => {
   return loose ? String(row[loose]) : '';
 };
 
+const DEFAULT_BLOOM_BY_FORMAT: Partial<Record<CardFormat, BloomLevel>> = {
+  'Standard MCQ': 'Remember',
+  'Two-Tier MCQ': 'Analyze',
+  'Fill in the Blank': 'Remember',
+  'Short Answer': 'Understand',
+  'Compare/Contrast': 'Analyze',
+  'Drag and Drop Sorting': 'Apply',
+  'Sequencing': 'Apply',
+  'CER': 'Evaluate',
+};
 
 // Function to transform a parsed CSV row into a Flashcard object
 const transformRowToCard = (row: any): Flashcard | null => {
@@ -82,8 +92,15 @@ const transformRowToCard = (row: any): Flashcard | null => {
     const csvBloomRaw = pickBloomFromRow(row);
     // 2) Bracket in the text (supports all six levels)
     const bracket = (questionText.match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i)?.[1] ?? '');
-    const bloomLevel = (normalizeBloom(csvBloomRaw) ?? normalizeBloom(bracket) ?? 'Remember') as BloomLevel;
-    if (bracket) questionText = questionText.replace(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]\s*/i, '').trim();
+
+    const fromCsv     = normalizeBloom(csvBloomRaw);
+    const fromBracket = normalizeBloom(bracket);
+    const fromType    = DEFAULT_BLOOM_BY_FORMAT[cardType];
+    const bloomLevel = (fromCsv ?? fromBracket ?? fromType ?? 'Remember') as BloomLevel;
+
+    if (fromBracket) {
+      questionText = questionText.replace(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]\s*/i, '').trim();
+    }
 
 
     const baseCard: Partial<Flashcard> = {
