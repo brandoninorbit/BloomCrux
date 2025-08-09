@@ -338,14 +338,20 @@ export default function EditDeckPage() {
   }
 
   const groupedCards = useMemo(() => {
-    if (sortOrder === 'Default') {
-      return { 'default': cards };
+    if (sortOrder === 'Default' || !cards) {
+      return { 'default': cards || [] };
     }
 
     const bloomOrder: BloomLevel[] = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'];
 
+    const getGroupKey = (card: Flashcard): string => {
+        const rawKey = sortOrder === 'Bloom\'s Level' ? card.bloomLevel : card.cardFormat;
+        // Handle potential undefined or null keys, although TS types should prevent this.
+        return String(rawKey || 'Uncategorized');
+    };
+
     const grouped = cards.reduce((acc, card) => {
-      const key = sortOrder === 'Bloom\'s Level' ? card.bloomLevel : card.cardFormat;
+      const key = getGroupKey(card);
       if (!acc[key]) {
         acc[key] = [];
       }
@@ -360,6 +366,12 @@ export default function EditDeckPage() {
                 orderedGroup[level] = grouped[level];
             }
         });
+        // Add any cards that might have had a weird bloomLevel value
+        Object.keys(grouped).forEach(key => {
+            if (!orderedGroup[key]) {
+                orderedGroup[key] = grouped[key];
+            }
+        })
         return orderedGroup;
     }
 
@@ -387,17 +399,14 @@ export default function EditDeckPage() {
   
   const renderCard = (card: Flashcard) => {
     let prefix = '';
-    if (sortOrder === 'Bloom\'s Level') {
-        prefix = `[${card.bloomLevel}] `;
-    } else if (sortOrder === 'Card Format') {
-        prefix = `[${card.cardFormat}] `;
-    }
+    // This prefixing logic seems incorrect for grouped view, but let's keep it for now.
+    // The group header should be the primary indicator.
     
     return (
         <Card key={card.id}>
             <CardContent className="p-4 flex justify-between items-center">
                 <div>
-                    <p className="font-semibold">{prefix}{card.questionStem}</p>
+                    <p className="font-semibold">{card.questionStem}</p>
                     <p className="text-sm text-muted-foreground">{card.cardFormat}</p>
                 </div>
                 <div className="flex gap-1">
@@ -578,7 +587,7 @@ export default function EditDeckPage() {
              <div className="space-y-6">
                 {Object.entries(groupedCards).map(([groupName, groupCards]) => (
                     <div key={groupName}>
-                        {sortOrder !== 'Default' && (
+                        {sortOrder !== 'Default' && groupCards.length > 0 && (
                             <h3 className="text-md font-semibold text-muted-foreground mb-3">
                                 {groupName} ({groupCards.length})
                             </h3>
