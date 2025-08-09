@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
-import type { Deck, Flashcard, CardFormat, CERPart, DndItem, BloomLevel } from '@/stitch/types';
+import type { Deck, Flashcard, CardFormat, CERPart, DndItem, BloomLevel, CERCard } from '@/stitch/types';
 import { getDeck, saveDeck } from '@/lib/firestore';
 import { Loader2, PlusCircle, Star, Upload, Info, Trash2, FileText, Eye, Edit } from 'lucide-react';
 import Link from 'next/link';
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CreateCardDialog from '@/components/CreateCardDialog';
+import CERCardPreview from '@/components/CERCard';
 
 // CSV PARSING HELPERS
 const stripBOM = (s: string) => s.replace(/^\uFEFF/, '');
@@ -72,13 +73,13 @@ const pickBloomFromRow = (row: any): string => {
 
 const DEFAULT_BLOOM_BY_FORMAT: Partial<Record<CardFormat, BloomLevel>> = {
   'Standard MCQ': 'Remember',
-  'Two-Tier MCQ': 'Analyze',
+  'Two-Tier MCQ': 'Evaluate',
   'Fill in the Blank': 'Remember',
   'Short Answer': 'Understand',
   'Compare/Contrast': 'Analyze',
   'Drag and Drop Sorting': 'Apply',
   'Sequencing': 'Apply',
-  'CER': 'Evaluate',
+  'CER': 'Create',
 };
 
 // Function to transform a parsed CSV row into a Flashcard object
@@ -328,6 +329,9 @@ export default function EditDeckPage() {
   // State for deleting sources
   const [sourceToDelete, setSourceToDelete] = useState<string | null>(null);
   const [deckSources, setDeckSources] = useState<string[]>([]);
+  
+  // State for Card Preview
+  const [previewingCard, setPreviewingCard] = useState<Flashcard | null>(null);
 
   // State for sorting
   const [sortOrder, setSortOrder] = useState<'default'|'bloom'|'format'|'source'>('default');
@@ -671,6 +675,15 @@ export default function EditDeckPage() {
     )
   }
   
+  const handlePreviewCard = (card: Flashcard) => {
+      // For now, we only support CER previews.
+      if (card.cardFormat === 'CER') {
+          setPreviewingCard(card);
+      } else {
+          toast({ title: 'Preview Not Available', description: `Interactive preview for ${card.cardFormat} cards is coming soon.` });
+      }
+  };
+
   const renderCard = (card: Flashcard) => {
     let prefix = '';
     if (sortOrder === 'bloom') {
@@ -679,7 +692,6 @@ export default function EditDeckPage() {
         prefix = `[${card.cardFormat}]`;
     }
     
-    // Remove the bracketed prefix from the question stem if it exists for display
     const displayQuestion = getDisplayQuestion(card)
       .replace(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]\s*/i, '');
 
@@ -694,7 +706,7 @@ export default function EditDeckPage() {
                     <Button variant="ghost" size="icon" onClick={() => handleToggleStar(card.id)}>
                         <Star className={cn("h-4 w-4", card.isStarred && "fill-yellow-400 text-yellow-500")} />
                     </Button>
-                    <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => handlePreviewCard(card)}><Eye className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="hover:bg-destructive/10 hover:text-destructive" onClick={() => { /* Placeholder for delete */ alert(`Delete ${card.id}`)}}>
                         <Trash2 className="h-4 w-4" />
@@ -788,6 +800,25 @@ export default function EditDeckPage() {
         onSave={handleAddCard}
       />
       
+      <AlertDialog open={!!previewingCard} onOpenChange={(open) => !open && setPreviewingCard(null)}>
+          <AlertDialogContent className="sm:max-w-2xl">
+              <AlertDialogHeader>
+                  <AlertDialogTitle>Card Preview</AlertDialogTitle>
+                   <AlertDialogDescription>
+                      This is how the card will look and behave in study mode. Progress is not saved in this view.
+                   </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="py-4">
+                  {previewingCard?.cardFormat === 'CER' && (
+                      <CERCardPreview card={previewingCard as CERCard} onLog={() => {}} />
+                  )}
+              </div>
+               <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setPreviewingCard(null)}>Close</AlertDialogCancel>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Edit Deck</h1>
         <div className="flex gap-2">

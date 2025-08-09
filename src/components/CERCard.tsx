@@ -25,9 +25,7 @@ const shuffle = <T,>(array: T[]): T[] => {
 
 export default function CERCard({ card, onLog }: { card: CERCardType, onLog: (wasCorrect: boolean) => void }) {
   const parts = Array.isArray(card.parts) ? card.parts : [];
-  const hasAnyMcq = parts.some(p => p.inputType === 'mcq'); parts.some(p => p.inputType === 'mcq');
 
-    const [mode, setMode] = useState<'mcq' | 'text'>(hasAnyMcq ? 'mcq' : 'text');
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [submitted, setSubmitted] = useState(false);
     const [override, setOverride] = useState(false);
@@ -36,7 +34,9 @@ export default function CERCard({ card, onLog }: { card: CERCardType, onLog: (wa
     const shuffledMcqParts = useMemo(() => {
         return parts.map(part => {
             if (part.inputType === 'mcq' && part.options) {
-                return { ...part, options: shuffle(part.options) };
+                // Ensure options is always an array before shuffling
+                const optionsToShuffle = Array.isArray(part.options) ? part.options : [];
+                return { ...part, options: shuffle(optionsToShuffle) };
             }
             return part;
         });
@@ -91,18 +91,6 @@ export default function CERCard({ card, onLog }: { card: CERCardType, onLog: (wa
         </Card>
         <p className="text-xl font-semibold mb-4 text-center">{card.question}</p>
         
-        {hasAnyMcq && !isTextMode && !submitted && (
-            <RadioGroup defaultValue="mcq" onValueChange={(v) => setMode(v as 'mcq' | 'text')} className="flex justify-center gap-4 mb-4">
-                 <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="mcq" id="mode-mcq" />
-                    <Label htmlFor="mode-mcq">Multiple Choice</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="text" id="mode-text" />
-                    <Label htmlFor="mode-text">Free Text</Label>
-                </div>
-            </RadioGroup>
-        )}
 
         {shuffledMcqParts.map((part, index) => {
             const originalPart = parts[index]; // Use original part for correct answer checking
@@ -111,7 +99,7 @@ export default function CERCard({ card, onLog }: { card: CERCardType, onLog: (wa
             return (
             <div key={part.key}>
                 <Label htmlFor={part.key} className="text-base font-semibold capitalize">{part.key}</Label>
-                {(mode === 'mcq' && part.inputType === 'mcq') ? (
+                {(part.inputType === 'mcq') ? (
                     <Select
                         disabled={submitted}
                         onValueChange={(v) => handleAnswerChange(part.key, v)}
@@ -162,13 +150,13 @@ export default function CERCard({ card, onLog }: { card: CERCardType, onLog: (wa
                 </Button>
             ) : (
                 <div className="space-y-3">
-                    {mode === 'mcq' ? (
+                    {parts.some(p => p.inputType === 'mcq') ? (
                        <p className={`font-semibold text-lg ${
                             parts.every(p => getPartCorrectness(p.key) !== 'incorrect')
                             ? 'text-green-600' : 'text-red-600'
                        }`}>
                            {parts.every(p => getPartCorrectness(p.key) !== 'incorrect')
-                            ? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ All correct!" : "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ Some parts were incorrect."}
+                            ? "All correct!" : "Some parts were incorrect."}
                        </p>
                     ) : (
                         <div>
@@ -189,5 +177,3 @@ export default function CERCard({ card, onLog }: { card: CERCardType, onLog: (wa
     </div>
   );
 }
-
-
