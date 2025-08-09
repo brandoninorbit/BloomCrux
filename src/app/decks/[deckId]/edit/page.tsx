@@ -14,6 +14,7 @@ import { getDeck, saveDeck } from '@/lib/firestore';
 import { Loader2, PlusCircle, Star, Upload, Info, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { MOCK_DECKS_BY_FOLDER, MOCK_DECKS_RECENT } from '@/mock/decks';
 
 export default function EditDeckPage() {
   const { deckId } = useParams() as { deckId: string };
@@ -32,10 +33,19 @@ export default function EditDeckPage() {
   useEffect(() => {
     const fetchDeckData = async () => {
       if (!user) {
-        // If not logged in, show mock data for layout purposes
-        setDeck({ id: 'mock-deck', title: 'Lec 02 + 03 MBB343', description: 'Lecture 2 and 3 genetic engineering course', cards: [] });
-        setTitle('Lec 02 + 03 MBB343');
-        setDescription('Lecture 2 and 3 genetic engineering course');
+        // If not logged in, find the mock deck to display for layout purposes
+        const allMocks = [...MOCK_DECKS_RECENT, ...Object.values(MOCK_DECKS_BY_FOLDER).flat()];
+        const mockDeck = allMocks.find(d => d.id === deckId);
+        if (mockDeck) {
+            setDeck(mockDeck);
+            setTitle(mockDeck.title);
+            setDescription(mockDeck.description);
+        } else {
+            // Fallback for an unknown mock ID
+            setDeck({ id: 'mock-deck', title: 'Mock Deck Not Found', description: 'Please check the deck ID.', cards: [] });
+            setTitle('Mock Deck Not Found');
+            setDescription('Please check the deck ID.');
+        }
         setLoading(false);
         return;
       }
@@ -49,16 +59,26 @@ export default function EditDeckPage() {
           setDescription(fetchedDeck.description);
         } else {
           // Handle deck not found
+          toast({
+            variant: "destructive",
+            title: "Not Found",
+            description: "Could not find the requested deck.",
+          })
           router.push('/decks');
         }
       } catch (error) {
         console.error("Failed to fetch deck:", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to load your deck.",
+        })
       } finally {
         setLoading(false);
       }
     };
     fetchDeckData();
-  }, [user, deckId, router]);
+  }, [user, deckId, router, toast]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -98,7 +118,7 @@ export default function EditDeckPage() {
     }
   };
   
-  const starredCount = deck?.cards.filter(c => c.isStarred).length || 5; // using 5 as mock fallback
+  const starredCount = deck?.cards.filter(c => c.isStarred).length || 0;
 
   if (loading) {
     return (
