@@ -13,16 +13,6 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
-const missionTabs = [
-    { key: 'quest', label: 'Quest', icon: CaseUpper },
-    { key: 'remix', label: 'Remix', icon: Shuffle },
-    { key: 'practice', label: 'Practice', icon: Target },
-    { key: 'starred', label: 'Starred', icon: Star },
-    { key: 'timed', label: 'Timed', icon: Timer },
-    { key: 'level-up', label: 'Level Up', icon: BookOpen },
-    { key: 'topic-trek', label: 'Topic Trek', icon: Rocket },
-];
-
 const MOCK_DECK: Deck = {
     id: 'mock-deck',
     title: 'Example Deck (Logged Out)',
@@ -106,25 +96,6 @@ export default function StudyHubPage() {
 
     return (
         <main className="min-h-screen bg-gray-50/50">
-            <header className="border-b bg-white">
-                <nav className="container mx-auto px-6 flex items-center gap-6">
-                    {missionTabs.map(tab => (
-                       <Link
-                          key={tab.key}
-                          href={`/decks/${deckId}/study/${tab.key}`}
-                          className={cn(
-                            "flex items-center gap-2 py-4 border-b-2 border-transparent text-muted-foreground hover:text-primary hover:border-primary transition-colors",
-                            // Example of how to style the active tab
-                            // pathname.endsWith(tab.key) && "text-primary border-primary" 
-                          )}
-                        >
-                          <tab.icon className="h-4 w-4" />
-                          <span className="text-sm font-medium">{tab.label}</span>
-                        </Link>
-                    ))}
-                </nav>
-            </header>
-            
             <div className="container mx-auto max-w-4xl p-4 py-8">
                 <section className="text-center mb-8">
                     <Info className="h-10 w-10 mx-auto text-primary mb-2" />
