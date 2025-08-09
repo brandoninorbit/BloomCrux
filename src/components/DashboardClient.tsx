@@ -59,6 +59,9 @@ const MOCK_XP_STATS: UserXpStats = { sessionXP: 120, dailyXP: 850, bonusVault: 5
 type DashboardSection = 'header' | 'devControls' | 'dossiers' | 'progressChart';
 const initialSections: DashboardSection[] = ['header', 'devControls', 'dossiers', 'progressChart'];
 
+const toDate = (d: Date | Timestamp) =>
+  d instanceof Date ? d : (d as Timestamp).toDate();
+
 export default function DashboardClient() {
     const [deckProgress, setDeckProgress] = useState<DeckProgress[]>([]);
     const [globalProgress, setGlobalProgress] = useState<GlobalProgress | null>(null);
@@ -129,7 +132,7 @@ export default function DashboardClient() {
                 const current = progressByDeck[attempt.deckId];
                 
                 const attemptTimestamp = attempt.timestamp instanceof Timestamp ? attempt.timestamp.toDate() : new Date(0);
-                const lastStudiedTimestamp = current.lastStudied instanceof Date ? current.lastStudied : new Date(current.lastStudied);
+                const lastStudiedTimestamp = toDate(current.lastStudied);
 
                 if (attemptTimestamp > lastStudiedTimestamp) {
                     current.lastStudied = attempt.timestamp;
@@ -147,8 +150,8 @@ export default function DashboardClient() {
             }
             
             const finalProgress = Object.values(progressByDeck).sort((a,b) => {
-                const aTime = (a.lastStudied instanceof Date ? a.lastStudied : (a.lastStudied as Timestamp).toDate()).getTime();
-                const bTime = (b.lastStudied instanceof Date ? b.lastStudied : (b.lastStudied as Timestamp).toDate()).getTime();
+                const aTime = toDate(a.lastStudied).getTime();
+                const bTime = toDate(b.lastStudied).getTime();
                 return bTime - aTime;
             });
 
@@ -417,5 +420,3 @@ export default function DashboardClient() {
         </div>
     );
 }
-
-    

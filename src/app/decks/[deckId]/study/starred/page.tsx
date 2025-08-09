@@ -183,7 +183,7 @@ function StarredStudySession({ cards, deck, onExit, initialDeckProgress, isXpBoo
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => router.push(`/decks/${deckId}/study`)}>Back to Missions</AlertDialogCancel>
+                        <AlertDialogCancel onClick={() => router.push(`/decks/${deck.id}/study`)}>Back to Missions</AlertDialogCancel>
                         <AlertDialogAction onClick={() => {
                             setShowCheckpoint(false);
                             proceedToNextCard();
