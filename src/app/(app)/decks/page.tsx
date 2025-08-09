@@ -21,7 +21,9 @@ export default function DecksPage() {
   const search = useSearchParams();
   const qFolder = search.get("folder");
   const { user } = useUserAuth();
-  const uid = user?.uid;
+  
+  // This is the key change: use the real uid if available, otherwise fallback to 'demo-user'
+  const uid = user?.uid || 'demo-user';
 
   const [mode, setMode] = useState<Mode>(qFolder ? { kind: "folder", folderId: qFolder, folderName: "..." } : { kind: "recent" });
   
@@ -30,14 +32,11 @@ export default function DecksPage() {
 
   const [loading, setLoading] = useState(true);
 
-  // Load all user data (topics/decks) once
+  // Load all user data (topics/decks) once, using the determined uid
   useEffect(() => {
-    if (!uid) {
-        setLoading(false);
-        return;
-    };
     (async () => {
       setLoading(true);
+      // The uid will be either the logged-in user's or 'demo-user'
       const topics = await getTopics(uid);
       const decks = topics.flatMap(t => t.decks ?? []);
       
@@ -76,8 +75,9 @@ export default function DecksPage() {
   
   const heading = useMemo(() => {
     if (mode.kind === "recent") return "Recent Decks";
-    return `Folder: ${mode.folderName}`;
-  }, [mode]);
+    const folder = allFolders.find(f => f.id === (mode as any).folderId);
+    return `Folder: ${folder?.name || '...'}`;
+  }, [mode, allFolders]);
 
   function openFolder(f: Folder) {
     setMode({ kind: "folder", folderId: f.id, folderName: f.name });
