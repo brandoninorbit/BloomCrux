@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
-import { getShopItems, purchaseShopItem } from '@/lib/firestore';
+import { purchaseShopItem } from '@/lib/firestore'; // Removed getShopItems
 import type { ShopItem } from '@/stitch/types';
 import { Loader2 } from 'lucide-react';
 import ShopItemCard from './ShopItemCard';
@@ -19,30 +19,8 @@ const GlobalShop = () => {
     const { user } = useUserAuth();
     const { toast } = useToast();
     const { settings, loading: settingsLoading } = useUserSettings();
-    const [items, setItems] = React.useState<ShopItem[]>([]);
-    const [loading, setLoading] = React.useState(true);
-
-    React.useEffect(() => {
-        if (!user) {
-            // For logged-out users, show mock data immediately.
-            setItems(GLOBAL_SHOP_ITEMS as ShopItem[]);
-            setLoading(false);
-            return;
-        }
-
-        const fetchShopData = async () => {
-            setLoading(true);
-            try {
-                const shopItems = await getShopItems(); // Fetch global items
-                setItems(shopItems);
-            } catch (error) {
-                toast({ variant: 'destructive', title: 'Error', description: 'Could not load shop data.' });
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchShopData();
-    }, [user, toast]);
+    // The component now directly uses the imported constant.
+    const items = GLOBAL_SHOP_ITEMS as ShopItem[];
 
     const handlePurchase = async (item: ShopItem) => {
         if (!user) {
@@ -69,7 +47,7 @@ const GlobalShop = () => {
     };
     
 
-    if (loading || settingsLoading) {
+    if (settingsLoading) {
         return <Loader2 className="mx-auto h-8 w-8 animate-spin" />;
     }
     
