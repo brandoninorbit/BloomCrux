@@ -31,56 +31,50 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// helper near the top of the file
-const pickCaseInsensitive = (row: any, ...candidates: string[]) => {
-  const keys = Object.keys(row);
-  for (const cand of candidates) {
-    const hit = keys.find(k => k.toLowerCase() === cand.toLowerCase());
-    if (hit) return (row[hit] ?? '').toString();
+// CSV PARSING HELPERS
+const stripBOM = (s: string) => s.replace(/^\uFEFF/, '');
+const asciiQuotes = (s: string) => s.replace(/[’‘]/g, "'").replace(/[“”]/g, '"');
+const normKey = (k: string) => asciiQuotes(stripBOM(k)).trim().toLowerCase();
+
+const normalizeRowKeys = (row: any) => {
+  const out: Record<string, any> = {};
+  Object.keys(row).forEach(k => {
+    out[normKey(k)] = row[k];
+  });
+  return out;
+};
+
+const from = (row: any, ...names: string[]) => {
+  for (const n of names) {
+    const v = row[n.toLowerCase()];
+    if (v != null && String(v).trim() !== '') return String(v);
   }
-  // fallback: any key containing "bloom"
-  const loose = keys.find(k => /bloom/i.test(k));
-  return loose ? (row[loose] ?? '').toString() : '';
+  return '';
+};
+
+const toBloom = (s: string): BloomLevel | null => {
+  const m = s.trim().toLowerCase();
+  if (m === 'remember') return 'Remember';
+  if (m === 'understand') return 'Understand';
+  if (m === 'apply') return 'Apply';
+  if (m === 'analyze' || m === 'analyse') return 'Analyze';
+  if (m === 'evaluate') return 'Evaluate';
+  if (m === 'create') return 'Create';
+  return null;
 };
 
 
 // Function to transform a parsed CSV row into a Flashcard object
 const transformRowToCard = (row: any): Flashcard | null => {
-    const cardType = row.CardType as CardFormat;
+    const cardTypeRaw = from(row, 'cardtype', 'card type', 'format', 'type');
+    const cardType = cardTypeRaw as CardFormat;
     if (!cardType) return null;
 
-    let questionText = row.Question || row.Prompt || row.Title || '';
-    
-    let bloomLevel: BloomLevel = 'Remember';
-
-    // Pull from any reasonable Bloom column name (handles straight/curly apostrophes)
-    const csvBloomRaw = pickCaseInsensitive(
-      row,
-      'Bloom', 'BloomLevel', 'Blooms Level', "Bloom's Level", 'Bloom’s Level'
-    ).trim();
-
-    const normalizeBloom = (s: string): BloomLevel | null => {
-      const m = s.toLowerCase();
-      if (m === 'remember') return 'Remember';
-      if (m === 'understand') return 'Understand';
-      if (m === 'apply') return 'Apply';
-      if (m === 'analyze' || m === 'analyse') return 'Analyze';
-      if (m === 'evaluate') return 'Evaluate';
-      if (m === 'create') return 'Create';
-      return null;
-    };
-
-    const byColumn  = normalizeBloom(csvBloomRaw);
-
-    // Also allow bracket prefix override in the question
+    let questionText = from(row, 'question', 'prompt', 'title');
+    const csvBloom = from(row, 'bloom', "bloom's level", "bloom’s level", 'bloomlevel', 'blooms level');
     const bracket = (questionText.match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i)?.[1] ?? '');
-    const byBracket = normalizeBloom(bracket);
-
-    // choose: column > bracket > default
-    bloomLevel = (byColumn ?? byBracket ?? 'Remember');
-    if (byBracket) {
-      questionText = questionText.replace(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]\s*/i, '').trim();
-    }
+    const bloomLevel = (toBloom(csvBloom) ?? toBloom(bracket) ?? 'Remember') as BloomLevel;
+    if (bracket) questionText = questionText.replace(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]\s*/i, '').trim();
 
 
     const baseCard: Partial<Flashcard> = {
@@ -94,53 +88,56 @@ const transformRowToCard = (row: any): Flashcard | null => {
 
     switch (cardType) {
         case 'Standard MCQ':
+            const answerA = from(row, 'answer', 'correctanswer');
             return {
                 ...baseCard,
                 tier1: {
                     question: questionText,
-                    options: [row.A, row.B, row.C, row.D].filter(Boolean),
-                    correctAnswerIndex: ['A', 'B', 'C', 'D'].indexOf(row.Answer),
-                    distractorRationale: { explanation: row.Explanation }
+                    options: [from(row, 'a'), from(row, 'b'), from(row, 'c'), from(row, 'd')].filter(Boolean),
+                    correctAnswerIndex: ['A', 'B', 'C', 'D'].indexOf(answerA.toUpperCase()),
+                    distractorRationale: { explanation: from(row, 'explanation', 'rationale') }
                 }
             } as Flashcard;
         case 'Two-Tier MCQ':
+             const answerT1 = from(row, 'answer', 'tier1answer');
+             const answerT2 = from(row, 'tier2answer');
              return {
                 ...baseCard,
                 tier1: {
                     question: questionText,
-                    options: [row.A, row.B, row.C, row.D].filter(Boolean),
-                    correctAnswerIndex: ['A', 'B', 'C', 'D'].indexOf(row.Answer),
+                    options: [from(row, 'a'), from(row, 'b'), from(row, 'c'), from(row, 'd')].filter(Boolean),
+                    correctAnswerIndex: ['A', 'B', 'C', 'D'].indexOf(answerT1.toUpperCase()),
                 },
                 tier2: {
-                    question: row.Tier2Question,
-                    options: [row.Tier2A, row.Tier2B, row.Tier2C, row.Tier2D].filter(Boolean),
-                    correctAnswerIndex: ['A', 'B', 'C', 'D'].indexOf(row.Tier2Answer),
+                    question: from(row, 'tier2question'),
+                    options: [from(row, 'tier2a'), from(row, 'tier2b'), from(row, 'tier2c'), from(row, 'tier2d')].filter(Boolean),
+                    correctAnswerIndex: ['A', 'B', 'C', 'D'].indexOf(answerT2.toUpperCase()),
                 }
             } as Flashcard;
         case 'Fill in the Blank':
             return {
                 ...baseCard,
                 prompt: questionText,
-                correctAnswer: row.Answer
+                correctAnswer: from(row, 'answer', 'correctanswer')
             } as Flashcard;
         case 'Short Answer':
             return {
                 ...baseCard,
                 prompt: questionText,
-                suggestedAnswer: row.SuggestedAnswer
+                suggestedAnswer: from(row, 'suggestedanswer', 'answer')
             } as Flashcard;
         case 'Compare/Contrast':
             return {
                 ...baseCard,
-                itemA: row.ItemA,
-                itemB: row.ItemB,
-                pairs: (row.Pairs || '').split('|').map((p: string) => {
+                itemA: from(row, 'itema'),
+                itemB: from(row, 'itemb'),
+                pairs: (from(row, 'pairs')).split('|').map((p: string) => {
                     const [feature, pointA, pointB] = p.split(';');
                     return { feature, pointA, pointB };
                 })
             } as Flashcard;
         case 'Drag and Drop Sorting':
-            const items: DndItem[] = (row.Items || '').split('|').map((item: string) => {
+            const items: DndItem[] = (from(row, 'items')).split('|').map((item: string) => {
                 const [term, correctCategory] = item.split(';');
                 return { term, correctCategory };
             });
@@ -152,7 +149,7 @@ const transformRowToCard = (row: any): Flashcard | null => {
                 categories,
             } as Flashcard;
         case 'Sequencing':
-            const seqItems = (row.Items || '').split('|');
+            const seqItems = (from(row, 'items')).split('|');
             return {
                 ...baseCard,
                 prompt: questionText,
@@ -160,7 +157,7 @@ const transformRowToCard = (row: any): Flashcard | null => {
                 correctOrder: seqItems,
             } as Flashcard;
         case 'CER':
-            const parts: CERPart[] = (row.Parts || '').split('|').map((partStr: string) => {
+            const parts: CERPart[] = (from(row, 'parts')).split('|').map((partStr: string) => {
                 const [key, type, ...rest] = partStr.split(';');
                 if (type === 'text') {
                     return { key, inputType: 'text', sampleAnswer: rest[0] };
@@ -173,7 +170,7 @@ const transformRowToCard = (row: any): Flashcard | null => {
 
             return {
                 ...baseCard,
-                prompt: row.Scenario,
+                prompt: from(row, 'scenario'),
                 question: questionText,
                 parts,
             } as Flashcard;
@@ -309,7 +306,8 @@ export default function EditDeckPage() {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
-            const imported = results.data
+            const normalizedRows = (results.data as any[]).map(normalizeRowKeys);
+            const imported = normalizedRows
                 .map(row => transformRowToCard(row))
                 .filter((card): card is Flashcard => card !== null);
             
