@@ -10,14 +10,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
 import type { Deck } from '@/stitch/types';
-import { getDeck } from '@/lib/firestore';
+import { getDeck, saveDeck } from '@/lib/firestore';
 import { Loader2, PlusCircle, Star, Upload, Info, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 export default function EditDeckPage() {
   const { deckId } = useParams() as { deckId: string };
   const { user } = useUserAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   const [deck, setDeck] = useState<Deck | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,6 +27,7 @@ export default function EditDeckPage() {
   const [description, setDescription] = useState('');
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchDeckData = async () => {
@@ -65,9 +68,34 @@ export default function EditDeckPage() {
     }
   };
 
-  const handleSaveChanges = () => {
-    // TODO: Implement save logic
-    console.log("Saving changes:", { title, description });
+  const handleSaveChanges = async () => {
+    if (!user || !deck) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "You must be logged in to save a deck.",
+        });
+        return;
+    }
+    setIsSaving(true);
+    try {
+        const updatedDeck: Deck = { ...deck, title, description };
+        await saveDeck(user.uid, updatedDeck);
+        toast({
+            title: "Success!",
+            description: "Your deck has been updated.",
+        });
+        router.push('/decks');
+    } catch (error) {
+        console.error("Failed to save changes:", error);
+        toast({
+            variant: "destructive",
+            title: "Save Failed",
+            description: "An error occurred while saving your deck.",
+        });
+    } finally {
+        setIsSaving(false);
+    }
   };
   
   const starredCount = deck?.cards.filter(c => c.isStarred).length || 5; // using 5 as mock fallback
@@ -94,7 +122,10 @@ export default function EditDeckPage() {
         <h1 className="text-3xl font-bold">Edit Deck</h1>
         <div className="flex gap-2">
           <Button variant="ghost" onClick={() => router.back()}>Cancel</Button>
-          <Button onClick={handleSaveChanges}>Save Changes to Deck</Button>
+          <Button onClick={handleSaveChanges} disabled={isSaving}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Changes to Deck
+          </Button>
         </div>
       </div>
 

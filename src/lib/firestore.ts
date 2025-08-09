@@ -2,6 +2,7 @@ import {
   getUserProgress as _getUserProgress,
   getTopics as _getTopics,
   getDeck,
+  saveDeck,
   getDeckProgress,
   getUserDeckProgress,
   saveUserDeckProgress,
@@ -64,6 +65,7 @@ export function getUserCustomizations(
 // Re-export other helpers
 export {
   getDeck,
+  saveDeck,
   getDeckProgress,
   getUserDeckProgress,
   saveUserDeckProgress,

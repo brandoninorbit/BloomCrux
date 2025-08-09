@@ -18,6 +18,7 @@
 
 
 
+
 import { collection, getDocs, query, where, addDoc, serverTimestamp, Timestamp, doc, setDoc, getDoc, runTransaction, writeBatch, increment, deleteDoc, onSnapshot, Unsubscribe, collectionGroup, orderBy, limit } from 'firebase/firestore';
 import { getDb, getFirebaseAuth, getFirebaseStorage } from './firebase';
 import type { Flashcard, CardAttempt, Topic, UserDeckProgress, UserPowerUps, Deck, BloomLevel, PowerUpType, PurchaseCounts, GlobalProgress, ShopItem, UserInventory, UserXpStats, UserCustomizations, SelectedCustomizations, UserSettings } from '../types';
@@ -113,6 +114,55 @@ export async function getDeck(userId: string, deckId: string): Promise<Deck | nu
         }
     }
     return null; // Deck not found
+}
+
+/**
+ * Saves a single, updated deck back into the user's topics structure.
+ * @param userId The ID of the user.
+ * @param updatedDeck The deck object with its changes.
+ */
+export async function saveDeck(userId: string, updatedDeck: Deck): Promise<void> {
+    const db = getDb();
+    const userTopicsDocRef = doc(db, 'userTopics', userId);
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const userTopicsDoc = await transaction.get(userTopicsDocRef);
+            if (!userTopicsDoc.exists()) {
+                throw new Error("User topics document not found.");
+            }
+
+            const topics = userTopicsDoc.data().topics as Topic[] || [];
+            let deckFound = false;
+
+            // Find and update the deck within the topics structure
+            const newTopics = topics.map(topic => ({
+                ...topic,
+                decks: topic.decks.map(deck => {
+                    if (deck.id === updatedDeck.id) {
+                        deckFound = true;
+                        // Return the updated deck, but without its cards property
+                        const { cards, ...deckToSave } = updatedDeck;
+                        return deckToSave;
+                    }
+                    return deck;
+                })
+            }));
+
+            if (!deckFound) {
+                // This case should ideally not happen if the UI flows correctly
+                // but as a fallback, you could decide to add it to a default topic
+                // or throw an error.
+                throw new Error("Deck to update not found in user's topics.");
+            }
+            
+            // Save the updated topics structure
+            transaction.set(userTopicsDocRef, { topics: sanitizeForFirestore(newTopics) });
+        });
+    } catch (error) {
+        console.error("Failed to save deck:", error);
+        throw error; // Re-throw the error to be handled by the caller
+    }
 }
 
 

@@ -20,11 +20,8 @@ export function DeckGrid({ decks }: { decks: StitchDeck[] }) {
           className="group perspective-1000 block"
         >
           <div className="relative w-full aspect-[3/4] bg-white rounded-xl shadow-md transition-all duration-500 group-hover:shadow-xl group-hover:-translate-y-2 flex flex-col justify-between">
-            <Link href={`/decks/${d.id}/study`} className="flex-grow flex flex-col justify-between p-4" prefetch={false}>
-                <div className="flex-grow flex items-center justify-center">
-                    <p className="text-lg font-medium text-center text-[#637488]">{d.description || "Deck"}</p>
-                </div>
-                <div className="text-sm font-medium">{d.title}</div>
+            <Link href={`/decks/${d.id}/study`} className="flex-grow flex flex-col justify-center items-center p-4 text-center" prefetch={false}>
+              <p className="text-lg font-semibold text-center text-gray-700">{d.title}</p>
             </Link>
             <div className="flex items-center justify-end p-2 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity">
                <Link href={`/decks/${d.id}/edit`} passHref>
