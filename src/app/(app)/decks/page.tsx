@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 import type { Topic as StitchTopic, Deck as StitchDeck } from '@/stitch/types';
 import { getTopics } from "@/lib/firestore";
 import { MOCK_DECKS_RECENT, MOCK_FOLDERS, MOCK_DECKS_BY_FOLDER, type MockDeck, type MockFolder } from "@/mock/decks";
+import { DeckGrid } from "@/components/DeckGrid";
 
 // Force demo in Studio by visiting /decks?demo=1
 const forceDemo =
@@ -121,8 +122,8 @@ export default function DecksPage() {
   }, [mode]);
   
   const decksToShow: StitchDeck[] = useMemo(() => {
-    if (forceDemo || !user) return MOCK_DECKS_RECENT;        // <- guaranteed mocks
-    const real = topics.flatMap((t) => t.decks || []);
+    if (forceDemo || !user) return MOCK_DECKS_RECENT;
+    const real = topics.flatMap((t) => t.decks || []).map(d => ({...d, title: d.title ?? (d as any).name}));
     return real.length ? real : [];
   }, [user, topics, forceDemo]);
 
@@ -141,7 +142,7 @@ export default function DecksPage() {
     setMode({ kind: "recent" });
   }
 
-  if (loading) {
+  if (loading && decksToShow.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -168,16 +169,14 @@ export default function DecksPage() {
 
             {/* Top grid (recent or folder decks) */}
             <section>
-              {decksToShow && decksToShow.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {decksToShow.map(d => (
-                    <a key={d.id} href={`/decks/${d.id}`} className="rounded-xl border p-6 hover:shadow-sm">
-                      {d.title}
-                    </a>
-                  ))}
+              {loading ? (
+                <div className="py-12 text-center">
+                  <Loader2 className="h-8 w-8 animate-spin inline-block text-primary" />
                 </div>
+              ) : decksToShow && decksToShow.length > 0 ? (
+                <DeckGrid decks={decksToShow as StitchDeck[]} />
               ) : (
-                <p className="text-sm text-muted-foreground">No decks yet.</p>
+                <DeckGrid decks={MOCK_DECKS_RECENT as StitchDeck[]} />
               )}
             </section>
 
