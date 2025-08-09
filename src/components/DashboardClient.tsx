@@ -51,10 +51,10 @@ const bloomOrder: BloomLevel[] = ['Remember', 'Understand', 'Apply', 'Analyze', 
 const MOCK_GLOBAL_PROGRESS: GlobalProgress = { level: 5, xp: 250, xpToNext: 1000, total: 0, reviewed: 0, percent: 0 };
 const MOCK_SETTINGS: UserSettings = { displayName: 'Mock User', email: 'mock@example.com', tokens: 1250, unlockedLevels: {} } as UserSettings;
 const MOCK_DECK_PROGRESS: DeckProgress[] = [
-    { deckId: 'mock1', deckName: 'Cellular Respiration', totalCards: 25, lastStudied: Timestamp.now(), isMastered: false, level: 3, xp: 40, xpToNext: 150, bloomMastery: { 'Remember': { correct: 8, total: 10 }, 'Understand': { correct: 5, total: 7 }}},
-    { deckId: 'mock2', deckName: 'Photosynthesis', totalCards: 30, lastStudied: Timestamp.now(), isMastered: true, level: 5, xp: 110, xpToNext: 200, bloomMastery: { 'Remember': { correct: 10, total: 10 }, 'Understand': { correct: 9, total: 10 }, 'Apply': {correct: 8, total: 10 }}},
+    { deckId: 'mock1', deckName: 'Cellular Respiration', totalCards: 25, lastStudied: new Date(), isMastered: false, level: 3, xp: 40, xpToNext: 150, bloomMastery: { 'Remember': { correct: 8, total: 10 }, 'Understand': { correct: 5, total: 7 }}},
+    { deckId: 'mock2', deckName: 'Photosynthesis', totalCards: 30, lastStudied: new Date(), isMastered: true, level: 5, xp: 110, xpToNext: 200, bloomMastery: { 'Remember': { correct: 10, total: 10 }, 'Understand': { correct: 9, total: 10 }, 'Apply': {correct: 8, total: 10 }}},
 ];
-const MOCK_XP_STATS: UserXpStats = { sessionXP: 120, dailyXP: 850, bonusVault: 50, commanderXP: (MOCK_GLOBAL_PROGRESS?.xp ?? 0), sessionStart: Timestamp.now(), lastDailyReset: Timestamp.now(), isXpBoosted: true };
+const MOCK_XP_STATS: UserXpStats = { sessionXP: 120, dailyXP: 850, bonusVault: 50, commanderXP: (MOCK_GLOBAL_PROGRESS?.xp ?? 0), sessionStart: new Date(), lastDailyReset: new Date(), isXpBoosted: true };
 
 type DashboardSection = 'header' | 'devControls' | 'dossiers' | 'progressChart';
 const initialSections: DashboardSection[] = ['header', 'devControls', 'dossiers', 'progressChart'];
@@ -129,7 +129,7 @@ export default function DashboardClient() {
                 const current = progressByDeck[attempt.deckId];
                 
                 const attemptTimestamp = attempt.timestamp instanceof Timestamp ? attempt.timestamp.toDate() : new Date(0);
-                const lastStudiedTimestamp = current.lastStudied instanceof Timestamp ? current.lastStudied.toDate() : new Date(current.lastStudied);
+                const lastStudiedTimestamp = current.lastStudied instanceof Date ? current.lastStudied : new Date(current.lastStudied);
 
                 if (attemptTimestamp > lastStudiedTimestamp) {
                     current.lastStudied = attempt.timestamp;
@@ -147,8 +147,8 @@ export default function DashboardClient() {
             }
             
             const finalProgress = Object.values(progressByDeck).sort((a,b) => {
-                const aTime = a.lastStudied instanceof Timestamp ? a.lastStudied.toMillis() : new Date(a.lastStudied).getTime();
-                const bTime = b.lastStudied instanceof Timestamp ? b.lastStudied.toMillis() : new Date(b.lastStudied).getTime();
+                const aTime = a.lastStudied instanceof Date ? a.lastStudied.getTime() : new Date(a.lastStudied).getTime();
+                const bTime = b.lastStudied instanceof Date ? b.lastStudied.getTime() : new Date(b.lastStudied).getTime();
                 return bTime - aTime;
             });
 
