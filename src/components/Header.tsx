@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { HelpCircle, Search, LogOut, Coins, Store, Upload, Settings } from 'lucide-react';
+import { HelpCircle, Search, LogOut, Coins, Store, Upload, Settings, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
@@ -26,11 +26,13 @@ import SettingsButton from './SettingsButton';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { avatarFrames } from '@/config/avatarFrames';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useNavigationLoader } from '@/hooks/useNavigationLoader';
 
 export function Header() {
   const pathname = usePathname();
   const { user, logOut } = useUserAuth();
   const { settings } = useUserSettings();
+  const { isLoading, push } = useNavigationLoader();
   const [customizations, setCustomizations] = useState<SelectedCustomizations | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -68,21 +70,30 @@ export function Header() {
     }
     return <div className={cn("absolute inset-0 pointer-events-none rounded-full", activeFrameData.className)} />;
   };
+  
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    if (isLoading) return;
+    push(href);
+  };
+
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center space-x-2">
+          <Link href="/" onClick={(e) => handleNavClick(e, '/')} className="flex items-center space-x-2">
             <Image src="https://stitchstudy.web.app/logo.svg" alt="BloomCrux Logo" width={48} height={48} />
             <span className="font-bold text-xl">BloomCrux</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
             <Link
               href="/"
+              onClick={(e) => handleNavClick(e, '/')}
               className={cn(
                 'transition-colors text-muted-foreground hover:text-foreground',
-                pathname === '/' && 'text-foreground font-semibold'
+                pathname === '/' && 'text-foreground font-semibold',
+                isLoading && 'opacity-50 pointer-events-none'
               )}
             >
               About
@@ -93,9 +104,11 @@ export function Header() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={(e) => handleNavClick(e, item.href)}
                   className={cn(
                     'transition-colors text-muted-foreground hover:text-foreground',
-                    isActive && 'text-foreground font-semibold'
+                    isActive && 'text-foreground font-semibold',
+                    isLoading && 'opacity-50 pointer-events-none'
                   )}
                 >
                   {item.label}
@@ -106,6 +119,8 @@ export function Header() {
         </div>
         
         <div className="flex items-center gap-4">
+          {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
+          
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
             <HelpCircle className="h-5 w-5" />
           </Button>
@@ -148,10 +163,10 @@ export function Header() {
             </TooltipProvider>
           ) : (
             <div className="flex items-center gap-2">
-              <Button asChild variant="ghost">
+              <Button asChild variant="ghost" onClick={(e) => { e.preventDefault(); if (!isLoading) push('/login'); }}>
                 <Link href="/login">Login</Link>
               </Button>
-              <Button asChild>
+              <Button asChild onClick={(e) => { e.preventDefault(); if (!isLoading) push('/signup'); }}>
                 <Link href="/signup">Sign Up</Link>
               </Button>
             </div>
@@ -161,5 +176,3 @@ export function Header() {
     </header>
   );
 }
-
-    
