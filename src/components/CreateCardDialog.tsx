@@ -38,7 +38,7 @@ const DEFAULT_BLOOM_BY_FORMAT: Record<CardFormat, BloomLevel> = {
   'Compare/Contrast': 'Analyze',
   'Drag and Drop Sorting': 'Apply',
   'Sequencing': 'Apply',
-  'Two-Tier MCQ': 'Analyze',
+  'Two-Tier MCQ': 'Evaluate',
   'CER': 'Evaluate',
   'text': 'Remember',
   'code': 'Apply',
@@ -388,7 +388,7 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
   };
 
   
-  const isTwoColumn = cardType === 'Compare/Contrast' || cardType === 'Drag and Drop Sorting';
+  const isTwoColumn = ['Compare/Contrast', 'Drag and Drop Sorting'].includes(cardType);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -429,12 +429,12 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
                       <SelectItem value="Compare/Contrast">Compare/Contrast</SelectItem>
                       <SelectItem value="Drag and Drop Sorting">Drag & Drop Sorting</SelectItem>
                       <SelectItem value="Sequencing">Sequencing</SelectItem>
-                      <SelectItem value="Two-Tier MCQ">Two-Tier MCQ</SelectItem>
                     </SelectGroup>
                     <SelectGroup>
                       <SelectLabel className="flex items-center gap-2">
                         <span className="text-lg">🧪</span> Evaluate / Create
                       </SelectLabel>
+                      <SelectItem value="Two-Tier MCQ">Two-Tier MCQ</SelectItem>
                       <SelectItem value="CER">Claim-Evidence-Reasoning</SelectItem>
                     </SelectGroup>
                   </SelectContent>
