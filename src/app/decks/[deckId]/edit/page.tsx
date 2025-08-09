@@ -37,14 +37,31 @@ const transformRowToCard = (row: any): Flashcard | null => {
     if (!cardType) return null;
 
     let questionText = row.Question || row.Prompt || row.Title || '';
-    let bloomLevel: BloomLevel = 'Remember'; // Default Bloom Level
+    
+    let bloomLevel: BloomLevel = 'Remember';
 
-    // Override Bloom's Level if specified in the question
-    const bloomMatch = questionText.match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i);
-    if (bloomMatch) {
-        bloomLevel = bloomMatch[1] as BloomLevel;
-        questionText = questionText.replace(bloomMatch[0], '').trim();
-    }
+    // 1) CSV columns take priority if present
+    const csvBloom = (row.Bloom ?? row.BloomLevel ?? '').toString().trim();
+    const normalizeBloom = (s: string): BloomLevel | null => {
+      const m = s.toLowerCase();
+      if (m === 'remember') return 'Remember';
+      if (m === 'understand') return 'Understand';
+      if (m === 'apply') return 'Apply';
+      if (m === 'analyze' || m === 'analyse') return 'Analyze';
+      if (m === 'evaluate') return 'Evaluate';
+      if (m === 'create') return 'Create';
+      return null;
+    };
+    const byColumn = normalizeBloom(csvBloom);
+
+    // 2) Bracket override in the question text
+    const bracket = (questionText.match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i)?.[1] ?? '');
+    const byBracket = normalizeBloom(bracket);
+
+    // Pick best source (column wins, else bracket, else default)
+    bloomLevel = (byColumn ?? byBracket ?? 'Remember') as BloomLevel;
+    if (byBracket) questionText = questionText.replace(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]\s*/i, '').trim();
+
 
     const baseCard: Partial<Flashcard> = {
         id: crypto.randomUUID(), // Generate a temporary unique ID
@@ -226,6 +243,35 @@ export default function EditDeckPage() {
     };
     fetchDeckData();
   }, [user, deckId, router, toast]);
+
+  useEffect(() => {
+    if (!cards?.length) return;
+    const norm = (s?: string | null) => (s ?? '').trim().toLowerCase();
+    const fix = (s: string): BloomLevel | null => {
+      const m = s.toLowerCase();
+      if (m === 'remember') return 'Remember';
+      if (m === 'understand') return 'Understand';
+      if (m === 'apply') return 'Apply';
+      if (m === 'analyze' || m === 'analyse') return 'Analyze';
+      if (m === 'evaluate') return 'Evaluate';
+      if (m === 'create') return 'Create';
+      return null;
+    };
+    let changed = false;
+    const repaired = cards.map(c => {
+      let b = fix(c.bloomLevel as any);
+      if (!b) {
+        const tag = c.questionStem?.match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i)?.[1];
+        const fromTag = tag ? fix(tag) : null;
+        if (fromTag) {
+          changed = true;
+          return { ...c, bloomLevel: fromTag };
+        }
+      }
+      return c;
+    });
+    if (changed) setCards(repaired);
+  }, [cards]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
