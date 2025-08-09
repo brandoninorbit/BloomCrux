@@ -1,5 +1,2 @@
-﻿import { redirect } from "next/navigation";
-
-export default function DecksIndex() {
-// redirect("/dashboard"); // or "/home"
-}
+// This file is obsolete because it has been moved to /src/app/(app)/decks/page.tsx
+// This file will be deleted.

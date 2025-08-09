@@ -1,0 +1,122 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import type { Topic as StitchTopic, Deck as StitchDeck } from '@/stitch/types';
+import { EmptyDeckState } from '@/components/EmptyDeckState';
+import { DueForReviewCard } from '@/components/DueForReviewCard';
+import { TodaySessionCard } from '@/components/TodaySessionCard';
+import type { GlobalProgress } from '@/types';
+import { useUserAuth } from '@/app/Providers/AuthProvider';
+import { Loader2, User } from 'lucide-react';
+import { AllCaughtUpCard } from '@/components/AllCaughtUpCard';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { getTopics, getUserProgress } from '@/lib/firestore';
+import AgentCard from '@/components/AgentCard';
+import { useUserSettings } from '@/hooks/useUserSettings';
+
+export default function HomePage() {
+  const { user } = useUserAuth();
+  const [userDecks, setUserDecks] = useState<StitchDeck[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [hasReviewHistory, setHasReviewHistory] = useState(false);
+  const { settings, loading: settingsLoading } = useUserSettings();
+  const [globalProgress, setGlobalProgress] = useState<GlobalProgress | null>(null);
+
+  useEffect(() => {
+    const checkData = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      try {
+        const [topics, userProgress] = await Promise.all([
+          getTopics(user.uid),
+          getUserProgress(user.uid)
+        ]);
+        
+        // Use proper typing instead of type assertions
+        const allDecks = topics.flatMap((topic: StitchTopic) => topic.decks ?? []);
+        const decksWithCards = allDecks.filter(
+          (deck: StitchDeck) => Array.isArray(deck.cards) && deck.cards.length > 0
+        );
+        
+        setUserDecks(decksWithCards);
+        setGlobalProgress(userProgress?.global || null);
+
+      } catch (e) {
+        console.error("Failed to parse decks from Firestore", e);
+        setUserDecks([]);
+      }
+      
+      const storedInteractions = localStorage.getItem('biocrux-interactions');
+      if (storedInteractions && Object.keys(JSON.parse(storedInteractions)).length > 0) {
+        setHasReviewHistory(true);
+      } else {
+        setHasReviewHistory(false);
+      }
+
+      setLoading(false);
+    }
+    checkData();
+  }, [user]);
+
+  if (loading || settingsLoading) {
+    return (
+        <div className="flex h-screen items-center justify-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+    );
+  }
+
+  if (!user) {
+    return (
+        <main className="container mx-auto flex max-w-4xl flex-col items-center justify-center p-4 py-8 text-center">
+            <Card className="w-full max-w-md text-center shadow-lg p-8">
+                <CardHeader>
+                    <User className="mx-auto h-16 w-16 text-primary" />
+                    <CardTitle className="font-headline text-2xl mt-4">Welcome to BloomCrux</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground mb-6">Please log in or sign up to start your personalized study sessions.</p>
+                    <div className="flex justify-center gap-4">
+                        <Button asChild>
+                           <Link href="/login">Login</Link>
+                        </Button>
+                         <Button asChild variant="secondary">
+                           <Link href="/signup">Sign Up</Link>
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </main>
+    );
+  }
+
+  const hasDecks = userDecks.length > 0;
+
+  return (
+    <div className="container mx-auto flex max-w-4xl flex-col items-center justify-center p-4 py-8">
+      {!hasDecks ? (
+        <EmptyDeckState />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+          <TodaySessionCard />
+          {hasReviewHistory ? (
+            <DueForReviewCard decks={userDecks} />
+          ) : (
+            <AllCaughtUpCard />
+          )}
+           <AgentCard 
+             className="md:col-span-1 h-full" 
+             globalProgress={globalProgress} 
+             settings={settings ? { displayName: (settings.displayName ?? ""), tokens: (settings.tokens ?? 0) } : null}
+             photoURL={user?.photoURL}
+           />
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,14 +1,2 @@
-
-"use client";
-import ShopLayout from "@/components/ShopLayout";
-import GlobalShop from "@/components/GlobalShop";
-
-export default function ShopPage() {
-  return (
-    <ShopLayout title="Commander’s Emporium">
-      <GlobalShop />
-    </ShopLayout>
-  );
-}
-
-
+// This file is obsolete because it has been moved to /src/app/(app)/shop/page.tsx
+// This file will be deleted.
