@@ -212,8 +212,7 @@ const getDisplayQuestion = (card: Flashcard) => {
 
   switch (card.cardFormat) {
     case 'Compare/Contrast':
-      // if itemA/B exist, show a sensible label
-      // @ts-ignore – if your type doesn’t include itemA/B, cast as any
+      // @ts-ignore
       return `${(card as any).itemA ?? ''} vs ${(card as any).itemB ?? ''}`.trim() || 'Compare/Contrast';
     case 'Drag and Drop Sorting':
       // @ts-ignore
@@ -229,6 +228,63 @@ const getDisplayQuestion = (card: Flashcard) => {
       return (card as any).question ?? 'CER';
     default:
       return 'Untitled';
+  }
+};
+
+const req = (row:any, key:string) =>
+  row[key] != null && String(row[key]).trim() !== '';
+
+const validateRow = (row:any): string | null => {
+  const type = String(row['cardtype'] ?? '').trim();
+  if (!type) return 'Missing CardType';
+
+  switch (type) {
+    case 'Standard MCQ':
+      if (!req(row,'question')) return 'Standard MCQ: missing Question';
+      for (const k of ['a','b','c','d']) if (!req(row,k)) return `Standard MCQ: missing option ${k}`;
+      if (!req(row,'answer')) return 'Standard MCQ: missing Answer';
+      if (!['a','b','c','d'].includes(String(row['answer']).trim().toLowerCase())) return 'Standard MCQ: Answer must be A/B/C/D';
+      return null;
+
+    case 'Two-Tier MCQ':
+      for (const k of ['question','a','b','c','d','answer','tier2question','tier2a','tier2b','tier2c','tier2d','tier2answer'])
+        if (!req(row,k)) return `Two-Tier MCQ: missing ${k}`;
+      if (!['a','b','c','d'].includes(String(row['answer']).trim().toLowerCase())) return 'Two-Tier MCQ: Answer must be A/B/C/D';
+      if (!['a','b','c','d'].includes(String(row['tier2answer']).trim().toLowerCase())) return 'Two-Tier MCQ: Tier2Answer must be A/B/C/D';
+      return null;
+
+    case 'Fill in the Blank':
+      if (!req(row,'question')) return 'Fill in the Blank: missing Question';
+      if (!req(row,'answer')) return 'Fill in the Blank: missing Answer';
+      return null;
+
+    case 'Short Answer':
+      if (!req(row,'question')) return 'Short Answer: missing Question';
+      if (!req(row,'suggestedanswer')) return 'Short Answer: missing SuggestedAnswer';
+      return null;
+
+    case 'Compare/Contrast':
+      if (!req(row,'itema') || !req(row,'itemb')) return 'Compare/Contrast: missing ItemA or ItemB';
+      if (!req(row,'pairs')) return 'Compare/Contrast: missing Pairs';
+      return null;
+
+    case 'Drag and Drop Sorting':
+      if (!req(row,'items')) return 'DnD Sorting: missing Items';
+      return null;
+
+    case 'Sequencing':
+      if (!req(row,'prompt')) return 'Sequencing: missing Prompt';
+      if (!req(row,'items')) return 'Sequencing: missing Items';
+      return null;
+
+    case 'CER':
+      if (!req(row,'scenario')) return 'CER: missing Scenario';
+      if (!req(row,'question')) return 'CER: missing Question';
+      if (!req(row,'parts')) return 'CER: missing Parts';
+      return null;
+
+    default:
+      return `Unknown CardType: "${type}"`;
   }
 };
 
@@ -254,6 +310,11 @@ export default function EditDeckPage() {
   
   // State for imported cards
   const [newlyImportedCards, setNewlyImportedCards] = useState<Flashcard[]>([]);
+  const [importReview, setImportReview] = useState<{
+    valid: Flashcard[];
+    errors: { row: number; message: string }[];
+  } | null>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   // State for deleting sources
   const [sourceToDelete, setSourceToDelete] = useState<string | null>(null);
@@ -362,28 +423,27 @@ export default function EditDeckPage() {
           return asciiQuotes(stripBOM(h)).trim().toLowerCase();
         },
         complete: (results) => {
-            const first = (results.data as any[])[0] ?? {};
-            console.debug('[headers]', Object.keys(first));
+            const rows = results.data as any[];
 
-            const imported = (results.data as any[])
-              .map(row => transformRowToCard(row))
-              .filter((card): card is Flashcard => card !== null);
-            
-            console.table(imported.slice(0,10).map(c => ({ bloom: c.bloomLevel, type: c.cardFormat })));
-            setNewlyImportedCards(imported);
+            const valid: Flashcard[] = [];
+            const errors: { row: number; message: string }[] = [];
 
-            if(imported.length > 0) {
-                 toast({
-                    title: "CSV Parsed!",
-                    description: `Found ${imported.length} cards. Click "Add New Cards" to add them to your deck.`,
-                 });
-            } else {
-                 toast({
-                    variant: "destructive",
-                    title: "Parsing Failed",
-                    description: "Could not find any valid cards in the CSV. Please check the format.",
-                 });
-            }
+            rows.forEach((row, i) => {
+                const msg = validateRow(row);
+                if (msg) {
+                    errors.push({ row: i + 2, message: msg });
+                    return;
+                }
+                const card = transformRowToCard(row);
+                if (!card) {
+                    errors.push({ row: i + 2, message: 'Row could not be transformed into a card' });
+                } else {
+                    valid.push(card);
+                }
+            });
+
+            setImportReview({ valid, errors });
+            setShowImportDialog(true);
         },
         error: (error) => {
             toast({ variant: "destructive", title: "Parsing Error", description: error.message });
@@ -615,6 +675,60 @@ export default function EditDeckPage() {
                     Delete Imported Cards
                 </AlertDialogAction>
             </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Import review</AlertDialogTitle>
+            <AlertDialogDescription>
+              Found <b>{importReview?.valid.length ?? 0}</b> valid cards
+              {importReview?.errors.length ? <> and <b>{importReview.errors.length}</b> problem row(s)</> : null}.
+              {importReview?.errors.length ? ' You can import the valid ones and skip the rest, or cancel to fix the CSV.' : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {importReview?.errors.length ? (
+            <div className="max-h-56 overflow-auto rounded-md border p-3 text-sm">
+              {importReview.errors.slice(0, 10).map(e => (
+                <div key={e.row} className="mb-1">
+                  Row {e.row}: {e.message}
+                </div>
+              ))}
+              {importReview.errors.length > 10 && (
+                <div className="mt-2 text-muted-foreground">
+                  …and {importReview.errors.length - 10} more
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setImportReview(null); }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!importReview) return;
+                if (!importReview.valid.length) {
+                  toast({ variant:'destructive', title:'No valid cards', description:'Fix the CSV and try again.' });
+                  return;
+                }
+                setNewlyImportedCards(importReview.valid);
+                setFileName(fileName); // keep the name visible if you want
+                setImportReview(null);
+                setShowImportDialog(false);
+                toast({
+                  title: 'CSV parsed',
+                  description: `Ready to add ${importReview.valid.length} card(s). ${importReview.errors.length ? `Skipped ${importReview.errors.length} invalid row(s).` : ''}`
+                });
+                if (!cardsLoaded) handleLoadCards();
+              }}
+            >
+              Import {importReview?.valid.length ?? 0} valid
+            </AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
       
