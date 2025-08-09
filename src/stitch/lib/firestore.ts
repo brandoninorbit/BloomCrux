@@ -14,6 +14,7 @@
 
 
 
+
 import { collection, getDocs, query, where, addDoc, serverTimestamp, Timestamp, doc, setDoc, getDoc, runTransaction, writeBatch, increment, deleteDoc, onSnapshot, Unsubscribe, collectionGroup, orderBy, limit } from 'firebase/firestore';
 import { getDb, getFirebaseStorage, getFirebaseAuth } from './firebase';
 import type { Flashcard, CardAttempt, Topic, UserDeckProgress, UserPowerUps, Deck, BloomLevel, PowerUpType, PurchaseCounts, GlobalProgress, ShopItem, UserInventory, UserXpStats, UserCustomizations, SelectedCustomizations, UserSettings } from '../types';
@@ -23,6 +24,7 @@ import { getStreakBonus } from './xp';
 import { toast } from '@/hooks/use-toast';
 import { type User, updateProfile } from 'firebase/auth';
 import { avatarFrames } from '@/config/avatarFrames';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 /**
  * Recursively removes keys with `undefined` values from an object or an array of objects.
@@ -792,7 +794,7 @@ export async function uploadProfilePhotoAndUpdateAuth(
   const auth = getFirebaseAuth();
 
   // Create a path like 'profilePhotos/{uid}/{filename}'
-  const photoRef = ref(storage, `profilePhotos/${user.uid}/${file.name}`);
+  const photoRef = storageRef(storage, `profilePhotos/${user.uid}/${file.name}`);
 
   // 1) Upload the bytes
   await uploadBytes(photoRef, file);
