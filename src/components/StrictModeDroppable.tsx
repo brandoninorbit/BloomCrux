@@ -1,3 +1,6 @@
+
+"use client";
+
 import type { DragEndEvent } from '@dnd-kit/core';
 interface SortableItemProps {
   id: string | number;
@@ -5,7 +8,6 @@ interface SortableItemProps {
   isSubmitted: boolean;
   correctOrder: Array<string | number>;
 }
-"use client";
 
 import { useState, useMemo } from "react";
 import type { SequencingCard as SequencingCardType } from '@/types';
@@ -176,7 +178,3 @@ export default function SequencingCard({
     </div>
   );
 }
-
-
-
-
