@@ -679,7 +679,7 @@ export default function EditDeckPage() {
   const handlePreviewCard = (card: Flashcard) => {
       const supportedFormats = [
         'CER', 'Compare/Contrast', 'Drag and Drop Sorting',
-        'Fill in the Blank', 'Short Answer', 'Sequencing'
+        'Fill in the Blank', 'Short Answer', 'Sequencing', 'Standard MCQ'
       ];
       if (supportedFormats.includes(card.cardFormat)) {
           setPreviewingCard(card);
@@ -809,7 +809,7 @@ export default function EditDeckPage() {
               <AlertDialogHeader>
                   <AlertDialogTitle>Card Preview</AlertDialogTitle>
                    <AlertDialogDescription>
-                      This is how the card will look and behave in study mode. Progress is not saved in this view.
+                      This is how the card will look and behave in study mode. Progress is saved.
                    </AlertDialogDescription>
               </AlertDialogHeader>
               <div className="py-4">
@@ -902,7 +902,7 @@ export default function EditDeckPage() {
             </CardHeader>
              <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
-                    Upload a CSV to import cards. Click the instructions button for formatting help.
+                    Upload a CSV and click the instructions button for formatting help.
                 </p>
                  <div className="flex items-center gap-4">
                     <Button variant="outline" onClick={() => fileInputRef.current?.click()}>

@@ -290,18 +290,30 @@ export function StudyCard({ card, onLogAttempt, onNextCard, isAnswered: external
       case 'Short Answer':
           const textCard = card as FillInTheBlankCard | ShortAnswerCard;
           const answer = textCard.cardFormat === 'Fill in the Blank' ? textCard.correctAnswer : textCard.suggestedAnswer;
+          const isSA = textCard.cardFormat === 'Short Answer';
           
           return (
              <div className={cn(cardContainerClasses, "space-y-4")}>
                 <h1 className="text-3xl font-bold text-gray-800">{textCard.prompt}</h1>
-                <Input
-                  value={textInput}
-                  onChange={(e) => setTextInput(e.target.value)}
-                  placeholder="Type your answer..."
-                  disabled={isAnswered}
-                  className="max-w-md mx-auto"
-                  onKeyDown={(e) => { if(e.key === 'Enter' && !isAnswered) handleCheckTextAnswer() }}
-                />
+                {isSA ? (
+                    <Textarea
+                        value={textInput}
+                        onChange={(e) => setTextInput(e.target.value)}
+                        placeholder="Type your answer..."
+                        disabled={isAnswered}
+                        className="max-w-md mx-auto"
+                        rows={4}
+                    />
+                ) : (
+                    <Input
+                      value={textInput}
+                      onChange={(e) => setTextInput(e.target.value)}
+                      placeholder="Type your answer..."
+                      disabled={isAnswered}
+                      className="max-w-md mx-auto"
+                      onKeyDown={(e) => { if(e.key === 'Enter' && !isAnswered) handleCheckTextAnswer() }}
+                    />
+                )}
                  {!isAnswered && <Button onClick={handleCheckTextAnswer}>Check Answer</Button>}
                  
                  {isAnswered && !isCorrect && (
