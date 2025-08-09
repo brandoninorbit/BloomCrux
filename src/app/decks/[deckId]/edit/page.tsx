@@ -15,6 +15,7 @@ import { Loader2, PlusCircle, Star, Upload, Info, Trash2, FileText, Eye } from '
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { MOCK_DECKS_BY_FOLDER, MOCK_DECKS_RECENT } from '@/mock/decks';
+import { cn } from '@/lib/utils';
 
 export default function EditDeckPage() {
   const { deckId } = useParams() as { deckId: string };
@@ -134,7 +135,15 @@ export default function EditDeckPage() {
         setCardsLoaded(true);
         setIsCardsLoading(false);
     }, 500); // Simulate network delay
-  }
+  };
+
+  const handleToggleStar = (cardId: string) => {
+    setCards(currentCards =>
+        currentCards.map(card =>
+            card.id === cardId ? { ...card, isStarred: !card.isStarred } : card
+        )
+    );
+  };
   
   const starredCount = cards.filter(c => c.isStarred).length || 0;
   const mockSources = ["questions_batch1_fixed.csv", "questions_batch2_fixed.csv", "questions_batch3_fixed.csv"];
@@ -282,7 +291,9 @@ export default function EditDeckPage() {
                             <p className="text-sm text-muted-foreground">{card.cardFormat}</p>
                         </div>
                         <div className="flex gap-1">
-                            <Button variant="ghost" size="icon"><Star className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleToggleStar(card.id)}>
+                                <Star className={cn("h-4 w-4", card.isStarred && "fill-yellow-400 text-yellow-500")} />
+                            </Button>
                             <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="icon" className="hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
                         </div>
