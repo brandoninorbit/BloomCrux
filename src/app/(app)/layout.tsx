@@ -1,5 +1,5 @@
+
 'use client';
-import { Header } from '@/components/Header';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -8,7 +8,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <Header />
       <main>{children}</main>
     </>
   );

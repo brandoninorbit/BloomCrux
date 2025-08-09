@@ -37,25 +37,6 @@ const FaqItem = ({ question, answer }: { question: string, answer: React.ReactNo
 export default function AboutPage() {
   return (
     <div className="relative flex w-full h-full min-h-screen flex-col overflow-x-hidden bg-background">
-      <header className="sticky top-0 z-20 w-full bg-white/80 backdrop-blur-md">
-        <div className="container mx-auto flex items-center justify-between whitespace-nowrap px-6 py-4">
-            <Link href="/" className="flex items-center gap-3">
-              <BloomCruxIcon />
-              <h2 className="text-xl font-bold tracking-tighter text-foreground">BloomCrux</h2>
-            </Link>
-            <nav className="hidden items-center gap-8 md:flex">
-                <Link className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors" href="/">Home</Link>
-                <Link className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors" href="/decks">Decks</Link>
-                <Link className="text-sm font-bold text-primary" href="/">About</Link>
-            </nav>
-            <div className="flex items-center gap-4">
-                <Button asChild>
-                    <Link href="/login">Get Started</Link>
-                </Button>
-            </div>
-        </div>
-      </header>
-
       <main className="flex-1">
         <section className="py-16 md:py-24 text-center">
             <div className="container mx-auto px-6">
@@ -164,6 +145,3 @@ export default function AboutPage() {
     </div>
   );
 }
-
-
-

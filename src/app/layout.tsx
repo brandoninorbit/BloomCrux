@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import { Lexend } from 'next/font/google'
 import AuthProvider from "@/app/Providers/AuthProvider";
+import { Header } from '@/components/Header';
 
 const lexend = Lexend({
   subsets: ['latin'],
@@ -26,6 +27,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={cn("min-h-screen bg-background font-body antialiased", lexend.variable)}>
         <AuthProvider>
+          <Header />
           {children}
         </AuthProvider>
         <Toaster />
