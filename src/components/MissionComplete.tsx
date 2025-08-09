@@ -77,19 +77,27 @@ export default function MissionComplete({
 
           {/* Card */}
           <div className="rounded-2xl border bg-card dark:bg-card p-8 shadow-sm relative overflow-hidden">
-            {/* Emblem */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.35 }}
-              className="mx-auto w-24 h-24 mb-6 flex items-center justify-center rounded-full
-                         text-primary
-                         ring-2 ring-primary/10"
-              aria-label="Mission complete emblem"
-              role="img"
-            >
-              <Trophy className="w-12 h-12" />
-            </motion.div>
+            {/* Emblem with pulsing glow */}
+            <div className="relative mx-auto mb-6 w-24 h-24">
+              {/* animated halo */}
+              <motion.div
+                className="absolute inset-0 rounded-full"
+                initial={{ boxShadow: "0 0 0 0 rgba(37,99,235,0.35)" }}
+                animate={{ boxShadow: [
+                  "0 0 0 0 rgba(37,99,235,0.35)",
+                  "0 0 0 14px rgba(37,99,235,0.00)"
+                ]}}
+                transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+              />
+              <div className="absolute inset-0 rounded-full bg-blue-400/25 blur-xl" />
+              <div className="absolute inset-1 rounded-full ring-2 ring-blue-200" />
+              <div className="relative w-full h-full rounded-full bg-blue-50 flex items-center justify-center shadow-[0_10px_20px_rgba(30,64,175,0.12)]">
+                <svg className="w-12 h-12 text-blue-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                  <path d="M8 21h8M12 17v4M7 4h10v3a5 5 0 0 1-10 0V4Z" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M17 7h2a2 2 0 0 1-2 2M7 7H5a2 2 0 0 0 2 2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+            </div>
 
             <h1 className="text-2xl md:text-3xl font-bold text-center">
               Agent, mission accomplished.
