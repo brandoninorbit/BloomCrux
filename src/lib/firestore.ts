@@ -8,7 +8,8 @@ import {
   getSelectedCustomizations,
   saveSelectedCustomizations,
   getUserInventory,
-  uploadProfilePhotoAndUpdateAuth
+  uploadProfilePhotoAndUpdateAuth,
+  resetDeckPurchaseCounts
 } from "../stitch/lib/firestore";
 
 import type { GlobalProgress as AppGlobalProgress, SelectedCustomizations } from "@/types";
@@ -61,4 +62,5 @@ export {
   saveSelectedCustomizations,
   getUserInventory,
   uploadProfilePhotoAndUpdateAuth,
+  resetDeckPurchaseCounts
 };
