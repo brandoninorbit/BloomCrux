@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import type { Topic as StitchTopic, Deck as StitchDeck } from '@/stitch/types';
 import { getTopics } from "@/lib/firestore";
-import { MOCK_DECKS_RECENT, MOCK_FOLDERS, MOCK_DECKS_BY_FOLDER, type MockDeck, type MockFolder } from "@/mock/decks";
+import { MOCK_DECKS_RECENT, MOCK_FOLDERS, MOCK_DECKS_BY_FOLDER as MOCK_DECKS_BY_FOLDER_RAW, type MockDeck, type MockFolder } from "@/mock/decks";
 import { DeckGrid } from "@/components/DeckGrid";
 
 // Force demo in Studio by visiting /decks?demo=1
@@ -19,8 +19,15 @@ const forceDemo =
   typeof window !== "undefined" &&
   new URLSearchParams(window.location.search).has("demo");
 
-type Deck = { id: string; name: string; folderId?: string | null; updatedAt?: any };
+type FolderDeck = { 
+  id: string; 
+  name: string; 
+  folderId?: string | null; 
+  updatedAt?: any 
+};
 type Folder = { id: string; name: string; count?: number };
+
+const MOCK_DECKS_BY_FOLDER: Record<string, FolderDeck[]> = MOCK_DECKS_BY_FOLDER_RAW as any;
 
 type Mode =
   | { kind: "recent" }
@@ -85,9 +92,9 @@ export default function DecksPage() {
   const qFolder = search.get("folder");
 
   const [mode, setMode] = useState<Mode>(qFolder ? { kind: "folder", folderId: qFolder, folderName: "..." } : { kind: "recent" });
-  const [recent, setRecent] = useState<Deck[] | null>(null);
+  const [recent, setRecent] = useState<StitchDeck[] | null>(null);
   const [folders, setFolders] = useState<Folder[]>([]);
-  const [folderDecks, setFolderDecks] = useState<Deck[] | null>(null);
+  const [folderDecks, setFolderDecks] = useState<FolderDeck[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [topics, setTopics] = useState<StitchTopic[]>([]);
 
@@ -152,10 +159,15 @@ export default function DecksPage() {
       );
       setFolderDecks(
         ds.docs.map((d) => {
-          const raw = d.data() as Deck;
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { id: _, ...rest } = raw;
-          return { id: d.id, ...rest } as Deck;
+          const raw = d.data() as any; // shape from Firestore
+          // Prefer a stable "name" field; fall back to `title` or `deckName`
+          const name: string = raw?.name ?? raw?.title ?? raw?.deckName ?? 'Untitled';
+          return {
+            id: d.id,
+            name,
+            folderId: raw?.folderId ?? null,
+            updatedAt: raw?.updatedAt ?? null,
+          } as FolderDeck;
         })
       );
       setMode({ kind: "folder", folderId: mode.folderId, folderName: name, count });
@@ -258,3 +270,5 @@ export default function DecksPage() {
     </main>
   );
 }
+
+    

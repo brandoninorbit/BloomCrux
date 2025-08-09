@@ -1,3 +1,4 @@
+
 import { 
   getUserProgress as _getUserProgress,
   getTopics as _getTopics,
@@ -52,12 +53,14 @@ export function getUserCustomizations(
   onSnap: (c: SelectedCustomizations | null) => void
 ): () => void {
   const q = query(
-    collection(db, "customizations"), // change this if your collection name is different
-    where("uid", "==", uid)
+    collection(db, "users", uid, "customizations", "selected")
   );
   return onSnapshot(q, (snap) => {
-    const data = snap.docs[0]?.data() ?? null;
-    onSnap(data as SelectedCustomizations | null);
+    if (snap.docs.length > 0) {
+      onSnap(snap.docs[0].data() as SelectedCustomizations);
+    } else {
+      onSnap(null);
+    }
   });
 }
 
@@ -81,3 +84,5 @@ export {
 };
 
 export type { UserDeckProgress };
+
+    

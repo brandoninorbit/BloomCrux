@@ -20,10 +20,11 @@
 
 
 
+
 import { collection, getDocs, query, where, addDoc, serverTimestamp, Timestamp, doc, setDoc, getDoc, runTransaction, writeBatch, increment, deleteDoc, onSnapshot, Unsubscribe, collectionGroup, orderBy, limit } from 'firebase/firestore';
 import { getDb, getFirebaseAuth, getFirebaseStorage } from './firebase';
 import type { Flashcard, CardAttempt, Topic, UserDeckProgress, UserPowerUps, Deck, BloomLevel, PowerUpType, PurchaseCounts, GlobalProgress, ShopItem, UserInventory, UserXpStats, UserCustomizations, SelectedCustomizations, UserSettings } from '../types';
-import { GLOBAL_SHOP_ITEMS } from './shop-items';
+import { GLOBAL_SHOP_ITEMS } from '@/lib/shop-items';
 import { calculateXpForCorrectAnswer } from './xpCalculator';
 import { getStreakBonus } from './xp';
 import { toast } from '@/hooks/use-toast';
@@ -845,5 +846,8 @@ export async function saveSelectedCustomizations(userId: string, selections: Par
     const docRef = doc(db, 'users', userId, 'customizations', 'selected');
     await setDoc(docRef, sanitizeForFirestore(selections), { merge: true });
 }
+
+    
+
 
     

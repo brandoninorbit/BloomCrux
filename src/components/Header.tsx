@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { UserPowerUps, SelectedCustomizations } from '@/types';
-import { getUserCustomizations, uploadProfilePhotoAndUpdateAuth } from '@/lib/firestore';
+import { getUserCustomizations } from '@/lib/firestore';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import SettingsButton from './SettingsButton';
@@ -161,3 +161,5 @@ export function Header() {
     </header>
   );
 }
+
+    

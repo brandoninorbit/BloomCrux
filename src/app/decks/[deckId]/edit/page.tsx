@@ -109,7 +109,7 @@ const transformRowToCard = (row: any): Flashcard | null => {
         questionStem: questionText,
         topic: 'Imported', // Default topic
         bloomLevel: bloomLevel,
-        cardFormat: cardType,
+        cardFormat: cardType === 'other' ? 'text' : cardType,
         isStarred: false,
     };
 
@@ -185,16 +185,22 @@ const transformRowToCard = (row: any): Flashcard | null => {
                 correctOrder: seqItems,
             } as Flashcard;
         case 'CER':
-            const parts: CERPart[] = (get(row, 'parts')).split('|').map((partStr: string) => {
-                const [key, type, ...rest] = partStr.split(';');
+            const parts: CERPart[] = String(get(row, 'parts', ''))
+              .split('|')
+              .reduce((acc, partStr) => {
+                const [keyRaw, type, ...rest] = partStr.split(';');
+                const key = (keyRaw || '').trim() as CERPart['key'];
+            
+                if (!key || (key !== 'claim' && key !== 'evidence' && key !== 'reasoning')) return acc;
+            
                 if (type === 'text') {
-                    return { key, inputType: 'text', sampleAnswer: rest[0] };
+                  acc.push({ key, inputType: 'text', sampleAnswer: rest[0] });
                 } else if (type === 'mcq') {
-                    const correctIndex = parseInt(rest.pop() || '0', 10);
-                    return { key, inputType: 'mcq', options: rest, correctIndex };
+                  const correctIndex = parseInt(rest.pop() || '0', 10);
+                  acc.push({ key, inputType: 'mcq', options: rest, correctIndex });
                 }
-                return null;
-            }).filter((p): p is CERPart => p !== null);
+                return acc;
+              }, [] as CERPart[]);
 
             return {
                 ...baseCard,
@@ -898,3 +904,5 @@ export default function EditDeckPage() {
     </main>
   );
 }
+
+    
