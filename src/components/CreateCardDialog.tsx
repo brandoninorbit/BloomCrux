@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { Flashcard, StandardMCQCard, CardFormat, FillInTheBlankCard, ShortAnswerCard, BloomLevel, CompareContrastCard, DragAndDropSortingCard, DndItem } from '@/stitch/types';
+import type { Flashcard, StandardMCQCard, CardFormat, FillInTheBlankCard, ShortAnswerCard, BloomLevel, CompareContrastCard, DragAndDropSortingCard, DndItem, SequencingCard } from '@/stitch/types';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Info, PlusCircle, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from './ui/tooltip';
@@ -69,6 +69,10 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
   const [dndPrompt, setDndPrompt] = useState('');
   const [dndCategories, setDndCategories] = useState(['']);
   const [dndItems, setDndItems] = useState<DndItem[]>([{ term: '', correctCategory: '' }]);
+
+  // Sequencing State
+  const [sequencingPrompt, setSequencingPrompt] = useState('');
+  const [sequenceItems, setSequenceItems] = useState(['']);
   
   useEffect(() => {
     // When card type changes, update the default bloom level
@@ -89,6 +93,8 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
     setDndPrompt('');
     setDndCategories(['']);
     setDndItems([{ term: '', correctCategory: '' }]);
+    setSequencingPrompt('');
+    setSequenceItems(['']);
   };
 
   const handleSave = () => {
@@ -180,6 +186,23 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
                 bloomLevel,
             } as DragAndDropSortingCard;
             break;
+
+        case 'Sequencing':
+            if (!sequencingPrompt.trim() || sequenceItems.some(item => !item.trim())) {
+                alert('Please fill out the prompt and all sequence items.');
+                return;
+            }
+            newCard = {
+                id: crypto.randomUUID(),
+                cardFormat: 'Sequencing',
+                questionStem: sequencingPrompt,
+                prompt: sequencingPrompt,
+                items: sequenceItems.filter(i => i.trim()),
+                correctOrder: sequenceItems.filter(i => i.trim()),
+                topic: 'Manual',
+                bloomLevel,
+            } as SequencingCard;
+            break;
             
         default:
             alert("This card type hasn't been implemented yet.");
@@ -237,11 +260,20 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
 
   const removeItem = (index: number) => setDndItems(dndItems.filter((_, i) => i !== index));
 
+  const handleSequenceItemChange = (index: number, value: string) => {
+    const newItems = [...sequenceItems];
+    newItems[index] = value;
+    setSequenceItems(newItems);
+  };
+
+  const addSequenceItem = () => setSequenceItems([...sequenceItems, '']);
+  
+  const removeSequenceItem = (index: number) => setSequenceItems(sequenceItems.filter((_, i) => i !== index));
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn("sm:max-w-[625px] transition-all duration-300",
-        cardType === 'Compare/Contrast' && "sm:max-w-4xl"
+        (cardType === 'Compare/Contrast' || cardType === 'Drag and Drop Sorting') && "sm:max-w-4xl"
       )}>
         <DialogHeader>
           <DialogTitle>Add a New Card</DialogTitle>
@@ -249,8 +281,8 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
             Select a card type and fill in the details. Click save when you're done.
           </DialogDescription>
         </DialogHeader>
-        <div className={cn("grid gap-4 py-4", cardType === 'Compare/Contrast' && "grid-cols-2")}>
-          <div className={cn("space-y-4", cardType === 'Compare/Contrast' && "pr-8 border-r")}>
+        <div className={cn("grid gap-4 py-4", (cardType === 'Compare/Contrast' || cardType === 'Drag and Drop Sorting') && "grid-cols-2")}>
+          <div className={cn("space-y-4", (cardType === 'Compare/Contrast' || cardType === 'Drag and Drop Sorting') && "pr-8 border-r")}>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="question-type" className="text-right">
                   Card Type
@@ -274,7 +306,7 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
                       </SelectLabel>
                       <SelectItem value="Compare/Contrast">Compare/Contrast</SelectItem>
                       <SelectItem value="Drag and Drop Sorting">Drag & Drop Sorting</SelectItem>
-                      <SelectItem value="Sequencing" disabled>Sequencing</SelectItem>
+                      <SelectItem value="Sequencing">Sequencing</SelectItem>
                     </SelectGroup>
                     <SelectGroup>
                       <SelectLabel className="flex items-center gap-2">
@@ -484,7 +516,80 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
                             <PlusCircle className="mr-2 h-4 w-4"/> Add Category
                         </Button>
                     </div>
+                 </div>
+              )}
+
+              {cardType === 'Sequencing' && (
+                <div className="space-y-4">
                     <div>
+                        <Label htmlFor="sequencing-prompt">Prompt / Instructions</Label>
+                        <Textarea id="sequencing-prompt" value={sequencingPrompt} onChange={(e) => setSequencingPrompt(e.target.value)} placeholder="Place the events of mitosis in the correct order." />
+                    </div>
+                    <div>
+                        <Label>Items (in correct order)</Label>
+                        <p className="text-xs text-muted-foreground">These will be shuffled for the user during the study session.</p>
+                        <div className="space-y-2 mt-2">
+                            {sequenceItems.map((item, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold text-muted-foreground">{index + 1}.</span>
+                                    <Input value={item} onChange={(e) => handleSequenceItemChange(index, e.target.value)} placeholder={`Step ${index + 1}`} />
+                                    {sequenceItems.length > 1 && (
+                                        <Button variant="ghost" size="icon" onClick={() => removeSequenceItem(index)}>
+                                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                         <Button variant="outline" size="sm" className="mt-2" onClick={addSequenceItem}>
+                            <PlusCircle className="mr-2 h-4 w-4"/> Add Item
+                        </Button>
+                    </div>
+                </div>
+              )}
+          </div>
+          
+          {(cardType === 'Compare/Contrast' || cardType === 'Drag and Drop Sorting') && (
+            <div className="space-y-4">
+                {cardType === 'Compare/Contrast' && (
+                     <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-center">Card Preview</h3>
+                        <Card className="p-4">
+                            <CardHeader className="p-2 text-center">
+                                <CardTitle>Compare {itemA || 'Item A'} and {itemB || 'Item B'}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Feature</TableHead>
+                                            <TableHead>{itemA || 'Item A'}</TableHead>
+                                            <TableHead>{itemB || 'Item B'}</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {comparisonPairs.map((pair, index) => (
+                                            pair.feature && (
+                                                <TableRow key={index}>
+                                                    <TableCell className="font-medium">{pair.feature}</TableCell>
+                                                    <TableCell>{pair.pointA}</TableCell>
+                                                    <TableCell>{pair.pointB}</TableCell>
+                                                </TableRow>
+                                            )
+                                        ))}
+                                        {comparisonPairs.every(p => !p.feature) && (
+                                            <TableRow>
+                                                <TableCell colSpan={3} className="text-center text-muted-foreground">Preview will appear here.</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
+                {cardType === 'Drag and Drop Sorting' && (
+                     <div>
                         <Label>Items to Sort</Label>
                         <div className="space-y-4">
                            {dndItems.map((item, index) => (
@@ -523,45 +628,7 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
                             <PlusCircle className="mr-2 h-4 w-4"/> Add Item
                         </Button>
                     </div>
-                 </div>
-              )}
-          </div>
-          
-          {cardType === 'Compare/Contrast' && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-center">Card Preview</h3>
-              <Card className="p-4">
-                <CardHeader className="p-2 text-center">
-                    <CardTitle>Compare {itemA || 'Item A'} and {itemB || 'Item B'}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Feature</TableHead>
-                                <TableHead>{itemA || 'Item A'}</TableHead>
-                                <TableHead>{itemB || 'Item B'}</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {comparisonPairs.map((pair, index) => (
-                                pair.feature && (
-                                    <TableRow key={index}>
-                                        <TableCell className="font-medium">{pair.feature}</TableCell>
-                                        <TableCell>{pair.pointA}</TableCell>
-                                        <TableCell>{pair.pointB}</TableCell>
-                                    </TableRow>
-                                )
-                            ))}
-                             {comparisonPairs.every(p => !p.feature) && (
-                                <TableRow>
-                                    <TableCell colSpan={3} className="text-center text-muted-foreground">Preview will appear here.</TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-              </Card>
+                )}
             </div>
           )}
 

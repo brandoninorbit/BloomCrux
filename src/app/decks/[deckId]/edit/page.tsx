@@ -851,7 +851,7 @@ export default function EditDeckPage() {
             </CardHeader>
              <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
-                    Upload a CSV with a `CardType` column. Supported types: 'Standard MCQ`, `Two-Tier MCQ', 'Fill in the Blank', 'Short Answer", "Compare/Contrast, Drag and Drop Sorting', 'Sequencing', 'CER".
+                    Upload a CSV to import cards. Click the instructions button for formatting help.
                 </p>
                  <div className="flex items-center gap-4">
                     <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
