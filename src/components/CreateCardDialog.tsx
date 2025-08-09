@@ -321,10 +321,12 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
   
   const removeSequenceItem = (index: number) => setSequenceItems(sequenceItems.filter((_, i) => i !== index));
   
+  const isTwoColumn = cardType === 'Compare/Contrast' || cardType === 'Drag and Drop Sorting';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn("sm:max-w-[625px] transition-all duration-300",
-        (cardType === 'Compare/Contrast' || cardType === 'Drag and Drop Sorting') && "sm:max-w-4xl"
+        isTwoColumn && "sm:max-w-4xl"
       )}>
         <DialogHeader>
           <DialogTitle>Add a New Card</DialogTitle>
@@ -333,9 +335,9 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
           </DialogDescription>
         </DialogHeader>
         <div className={cn("grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-4", 
-            (cardType === 'Compare/Contrast' || cardType === 'Drag and Drop Sorting') && "grid-cols-2"
+            isTwoColumn && "grid-cols-2"
         )}>
-          <div className={cn("space-y-4", (cardType === 'Compare/Contrast' || cardType === 'Drag and Drop Sorting') && "pr-8 border-r")}>
+          <div className={cn("space-y-4", isTwoColumn && "pr-8 border-r")}>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="question-type" className="text-right">
                   Card Type
@@ -662,7 +664,7 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
               )}
           </div>
           
-          {(cardType === 'Compare/Contrast' || cardType === 'Drag and Drop Sorting') && (
+          {isTwoColumn && (
             <div className="space-y-4">
                 {cardType === 'Compare/Contrast' && (
                      <div className="space-y-4">
