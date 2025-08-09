@@ -354,7 +354,7 @@ export default function EditDeckPage() {
                             <FileText className="h-5 w-5" />
                             <span className="font-medium">{source}</span>
                         </div>
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" className="hover:bg-destructive/10 hover:text-destructive">
                             <Trash2 className="h-4 w-4" />
                         </Button>
                     </div>
