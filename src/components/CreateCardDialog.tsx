@@ -13,9 +13,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { Flashcard, StandardMCQCard } from '@/stitch/types';
+import type { Flashcard, StandardMCQCard, CardFormat } from '@/stitch/types';
 
 interface CreateCardDialogProps {
   open: boolean;
@@ -28,6 +28,7 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
   const [options, setOptions] = useState(['', '', '', '']);
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState(0);
   const [explanation, setExplanation] = useState('');
+  const [cardType, setCardType] = useState<CardFormat>('Standard MCQ');
   
   const handleSave = () => {
     // Basic validation
@@ -80,12 +81,34 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
             <Label htmlFor="question-type" className="text-right">
               Question Type
             </Label>
-            <Select defaultValue="Standard MCQ">
+            <Select value={cardType} onValueChange={(v) => setCardType(v as CardFormat)}>
               <SelectTrigger id="question-type" className="col-span-3">
                 <SelectValue placeholder="Select a question type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Standard MCQ">Standard Multiple Choice</SelectItem>
+                <SelectGroup>
+                  <SelectLabel className="flex items-center gap-2">
+                    <span className="text-lg">🌱</span> Remember / Understand
+                  </SelectLabel>
+                  <SelectItem value="Standard MCQ">Standard Multiple Choice</SelectItem>
+                  <SelectItem value="Fill in the Blank" disabled>Fill in the Blank</SelectItem>
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel className="flex items-center gap-2">
+                    <span className="text-lg">🔧</span> Apply / Analyze
+                  </SelectLabel>
+                  <SelectItem value="Short Answer" disabled>Short Answer</SelectItem>
+                  <SelectItem value="Compare/Contrast" disabled>Compare/Contrast</SelectItem>
+                  <SelectItem value="Drag and Drop Sorting" disabled>Drag & Drop Sorting</SelectItem>
+                  <SelectItem value="Sequencing" disabled>Sequencing</SelectItem>
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel className="flex items-center gap-2">
+                    <span className="text-lg">🧪</span> Evaluate / Create
+                  </SelectLabel>
+                  <SelectItem value="Two-Tier MCQ" disabled>Two-Tier MCQ</SelectItem>
+                  <SelectItem value="CER" disabled>Claim-Evidence-Reasoning</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>

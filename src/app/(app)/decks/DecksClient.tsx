@@ -10,6 +10,18 @@ import { Loader2, Pencil } from "lucide-react";
 import { DeckGrid } from "@/components/DeckGrid";
 import Link from "next/link";
 import { EditFolderDialog } from "@/components/folders/EditFolderDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useRouter } from "next/navigation";
 
 
 /** Local, file-scoped mocks (used only when logged out) */
@@ -82,6 +94,8 @@ export default function DecksClient() {
   const [decks, setDecks] = useState<DeckSummary[] | null>(null);   // null = loading
   const [folders, setFolders] = useState<FolderSummary[] | null>(null);
   const [editingFolder, setEditingFolder] = useState<FolderSummary | null>(null);
+  const [showFolderDialog, setShowFolderDialog] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (!user) {
@@ -110,6 +124,21 @@ export default function DecksClient() {
   const handleCreateFolder = (newFolder: FolderSummary) => {
     setFolders(currentFolders => [...(currentFolders ?? []), newFolder]);
   };
+  
+  const handleNewSetClick = () => {
+    if (folders && folders.length > 0) {
+      setShowFolderDialog(true);
+    } else {
+      router.push(`/decks/new`);
+    }
+  };
+
+  const handleSelectFolderForNewSet = (folderId: string) => {
+    setShowFolderDialog(false);
+    // You can pass the folderId as a query param to the edit page
+    router.push(`/decks/new?folderId=${folderId}`);
+  };
+
 
   const loading = user && (decks === null || folders === null);
 
@@ -123,7 +152,7 @@ export default function DecksClient() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-semibold">Recent Decks</h2>
                 <div className="flex gap-2">
-                  <Button variant="secondary" asChild><Link href="/decks/new">New Set</Link></Button>
+                  <Button variant="secondary" onClick={handleNewSetClick}>New Set</Button>
                   <Button asChild><Link href="/decks/folders/new">New Folder</Link></Button>
                 </div>
               </div>
@@ -169,6 +198,38 @@ export default function DecksClient() {
           }}
         />
       )}
+      <AlertDialog open={showFolderDialog} onOpenChange={setShowFolderDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Select a Folder</AlertDialogTitle>
+            <AlertDialogDescription>
+              Which folder should this new set be created in?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-60 overflow-y-auto my-4 space-y-2">
+            {(folders ?? []).map((folder) => (
+              <Button
+                key={folder.id}
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => handleSelectFolderForNewSet(folder.id)}
+              >
+                {folder.name}
+              </Button>
+            ))}
+             <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => handleSelectFolderForNewSet("unfiled")}
+              >
+                Unfiled
+              </Button>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
