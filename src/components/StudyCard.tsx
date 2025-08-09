@@ -28,6 +28,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Textarea } from './ui/textarea';
+import { Separator } from './ui/separator';
 
 interface StudyCardProps {
     card: Flashcard;
@@ -284,6 +285,73 @@ export function StudyCard({ card, onLogAttempt, onNextCard, isAnswered: external
                     <p className="text-sm text-left">{scard.tier1.distractorRationale?.explanation || "No explanation provided."}</p>
                 </motion.div>
             )}
+          </div>
+        );
+      case 'Two-Tier MCQ':
+        const ttqCard = card as TwoTierMCQCard;
+        return (
+          <div className={cn(cardContainerClasses, "space-y-6")}>
+            {/* Tier 1 */}
+            <div>
+              <h2 className="text-lg font-semibold text-left mb-2 text-primary">Tier 1</h2>
+              <h1 className="text-2xl font-bold text-gray-800 mb-4 text-left">{ttqCard.tier1.question}</h1>
+              <div className="grid grid-cols-2 gap-4 w-full">
+                {ttqCard.tier1.options.map((option, index) => (
+                  <button
+                    key={`t1-${index}`}
+                    onClick={() => handleTwoTierAnswer('tier1', index)}
+                    disabled={isAnswered}
+                    className={cn(
+                      "p-4 text-left rounded-xl border-2 transition-all duration-200",
+                      tier1Answer === index && "border-primary bg-primary/10",
+                      isAnswered && index === ttqCard.tier1.correctAnswerIndex && "border-green-400 bg-green-50",
+                      isAnswered && tier1Answer === index && index !== ttqCard.tier1.correctAnswerIndex && "border-red-400 bg-red-50",
+                      !isAnswered && tier1Answer !== index && "border-gray-200 hover:border-primary hover:bg-primary/10"
+                    )}
+                  >
+                    <span className="font-bold mr-2">{String.fromCharCode(65 + index)}.</span>
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <AnimatePresence>
+            {tier1Answer !== null && (
+                <motion.div 
+                    className="space-y-4"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                >
+                    <Separator />
+                    {/* Tier 2 */}
+                    <div>
+                        <h2 className="text-lg font-semibold text-left mb-2 text-primary">Tier 2</h2>
+                        <h1 className="text-2xl font-bold text-gray-800 mb-4 text-left">{ttqCard.tier2.question}</h1>
+                         <div className="grid grid-cols-2 gap-4 w-full">
+                            {ttqCard.tier2.options.map((option, index) => (
+                                <button
+                                    key={`t2-${index}`}
+                                    onClick={() => handleTwoTierAnswer('tier2', index)}
+                                    disabled={isAnswered}
+                                    className={cn(
+                                        "p-4 text-left rounded-xl border-2 transition-all duration-200",
+                                        isAnswered && index === ttqCard.tier2.correctAnswerIndex && "border-green-400 bg-green-50",
+                                        isAnswered && tier2Answer === index && index !== ttqCard.tier2.correctAnswerIndex && "border-red-400 bg-red-50",
+                                        !isAnswered && "border-gray-200 hover:border-primary hover:bg-primary/10"
+                                    )}
+                                >
+                                    <span className="font-bold mr-2">{String.fromCharCode(65 + index)}.</span>
+                                    {option}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+            </AnimatePresence>
           </div>
         );
       case 'Fill in the Blank':

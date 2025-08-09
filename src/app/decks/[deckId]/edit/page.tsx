@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
-import type { Deck, Flashcard, CardFormat, CERPart, DndItem, BloomLevel, CERCard, CompareContrastCard, StandardMCQCard, FillInTheBlankCard, ShortAnswerCard, SequencingCard, DragAndDropSortingCard } from '@/stitch/types';
+import type { Deck, Flashcard, CardFormat, CERPart, DndItem, BloomLevel, CERCard, CompareContrastCard, StandardMCQCard, FillInTheBlankCard, ShortAnswerCard, SequencingCard, DragAndDropSortingCard, TwoTierMCQCard } from '@/stitch/types';
 import { getDeck, saveDeck } from '@/lib/firestore';
 import { Loader2, PlusCircle, Star, Upload, Info, Trash2, FileText, Eye, Edit } from 'lucide-react';
 import Link from 'next/link';
@@ -236,6 +236,9 @@ const getDisplayQuestion = (card: Flashcard) => {
     case 'CER':
       // @ts-ignore
       return (card as any).question ?? 'CER';
+    case 'Two-Tier MCQ':
+        const ttqCard = card as TwoTierMCQCard;
+        return ttqCard.tier1.question;
     default:
       return 'Untitled';
   }
@@ -678,7 +681,7 @@ export default function EditDeckPage() {
   
   const handlePreviewCard = (card: Flashcard) => {
       const supportedFormats = [
-        'CER', 'Compare/Contrast', 'Drag and Drop Sorting',
+        'CER', 'Compare/Contrast', 'Drag and Drop Sorting', 'Two-Tier MCQ',
         'Fill in the Blank', 'Short Answer', 'Sequencing', 'Standard MCQ'
       ];
       if (supportedFormats.includes(card.cardFormat)) {
