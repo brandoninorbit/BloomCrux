@@ -677,8 +677,11 @@ export default function EditDeckPage() {
   }
   
   const handlePreviewCard = (card: Flashcard) => {
-      // For now, we only support CER previews.
-      if (card.cardFormat === 'CER' || card.cardFormat === 'Compare/Contrast' || card.cardFormat === 'Drag and Drop Sorting') {
+      const supportedFormats = [
+        'CER', 'Compare/Contrast', 'Drag and Drop Sorting',
+        'Fill in the Blank', 'Short Answer'
+      ];
+      if (supportedFormats.includes(card.cardFormat)) {
           setPreviewingCard(card);
       } else {
           toast({ title: 'Preview Not Available', description: `Interactive preview for ${card.cardFormat} cards is coming soon.` });
