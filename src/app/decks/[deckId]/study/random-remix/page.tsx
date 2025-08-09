@@ -1,18 +1,18 @@
 
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUserAuth } from "@/context/AuthContext";
 import { getOrCreateRemixSession, advanceRemix } from "@/lib/remix";
-import { getAllCardsForDeck, getCardById, logCardAttempt } from "@/lib/firestore";
-import type { Flashcard } from "@/types";
+import { getAllCardsForDeck, getCardById, logCardAttempt, getUserProgress } from "@/lib/firestore";
+import type { Flashcard, GlobalProgress } from "@/types";
 import { StudyMissionLayout } from "@/components/StudyMissionLayout";
 import { StudyCard } from "@/components/StudyCard";
-import { Loader2, PartyPopper } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { Loader2 } from "lucide-react";
+import MissionComplete from "@/components/MissionComplete";
+import { doc, deleteDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function RandomRemixPage() {
   const { deckId } = useParams<{ deckId: string }>();
@@ -22,44 +22,45 @@ export default function RandomRemixPage() {
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
   const router = useRouter();
+  const [globalProgress, setGlobalProgress] = useState<GlobalProgress | null>(null);
 
-  useEffect(() => {
+  const fetchSession = useCallback(async () => {
     if (!user?.uid || !deckId) {
       setLoading(false);
       return;
     };
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const s = await getOrCreateRemixSession({
-          uid: user.uid,
-          deckId,
-          fetchAllCardsInDeck: (id) => getAllCardsForDeck(user.uid, id)
-        });
-        
-        if(s.currentIndex >= s.order.length) {
-            setSession(s);
-            setCurrentCard(null);
-            setLoading(false);
-            return;
-        }
-
-        const currentId = s.order[s.currentIndex];
-        const c = currentId ? await getCardById(user.uid, deckId, currentId) : null;
-        if (!cancelled) {
+    setLoading(true);
+    try {
+      const { global } = await getUserProgress(user.uid);
+      setGlobalProgress(global);
+      const s = await getOrCreateRemixSession({
+        uid: user.uid,
+        deckId,
+        fetchAllCardsInDeck: (id) => getAllCardsForDeck(user.uid, id)
+      });
+      
+      if(s.currentIndex >= s.order.length) {
           setSession(s);
-          setCurrentCard(c);
-        }
-      } catch (error) {
-          console.error("Failed to load remix session", error);
-          router.push(`/decks/${deckId}/study`);
-      } finally {
-        if (!cancelled) setLoading(false);
+          setCurrentCard(null);
+          setLoading(false);
+          return;
       }
-    })();
-    return () => { cancelled = true; };
+
+      const currentId = s.order[s.currentIndex];
+      const c = currentId ? await getCardById(user.uid, deckId, currentId) : null;
+      setSession(s);
+      setCurrentCard(c);
+    } catch (error) {
+        console.error("Failed to load remix session", error);
+        router.push(`/decks/${deckId}/study`);
+    } finally {
+      setLoading(false);
+    }
   }, [user?.uid, deckId, router]);
+
+  useEffect(() => {
+    fetchSession();
+  }, [fetchSession]);
 
   const percent = useMemo(() => {
     if (!session?.totalCards || session.totalCards === 0) return 0;
@@ -71,7 +72,6 @@ export default function RandomRemixPage() {
     setChecking(true);
     await advanceRemix(user.uid, deckId as string);
 
-    // Refresh local view
     const s = await getOrCreateRemixSession({
       uid: user.uid,
       deckId: deckId as string,
@@ -105,6 +105,14 @@ export default function RandomRemixPage() {
     }
   };
 
+  const handleRestart = async () => {
+    if (!user?.uid || !deckId) return;
+    setLoading(true);
+    const sessionRef = doc(db, "users", user.uid, "remixSessions", deckId);
+    await deleteDoc(sessionRef);
+    fetchSession();
+  };
+
 
   if (loading) {
     return (
@@ -116,22 +124,17 @@ export default function RandomRemixPage() {
 
   if (!currentCard) {
     return (
-       <main className="container mx-auto max-w-2xl p-4 py-8 text-center">
-         <Card className="p-8">
-            <CardHeader>
-                <PartyPopper className="h-16 w-16 text-primary mx-auto" />
-                <CardTitle className="text-3xl font-bold mt-4">Remix Complete!</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-muted-foreground mb-6">You've finished this randomized session. Great work.</p>
-                <div className="flex justify-center gap-4">
-                    <Button asChild>
-                        <Link href={`/decks/${deckId}/study`}>Back to Missions</Link>
-                    </Button>
-                </div>
-            </CardContent>
-         </Card>
-       </main>
+       <MissionComplete
+            modeName="Random Remix"
+            deckName={session?.deckTitle || "Deck"}
+            xp={150} // Placeholder
+            coins={75} // Placeholder
+            accuracy={92} // Placeholder
+            questionsAnswered={session?.totalCards || 0}
+            onReturnHQ={() => router.push('/dashboard')}
+            onRestartMission={handleRestart}
+            globalProgress={globalProgress}
+        />
     );
   }
 

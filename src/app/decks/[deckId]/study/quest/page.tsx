@@ -7,13 +7,13 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import type { Flashcard, StandardMCQCard, CompareContrastCard, DragAndDropSortingCard, FillInTheBlankCard, ShortAnswerCard, TwoTierMCQCard, CERCard, SequencingCard, Topic, Deck, StudyMode, DeckProgress, BloomLevel, UserPowerUps, PowerUpType, PurchaseCounts, CardFormat, UserXpStats, UserSettings } from '@/stitch/types';
+import type { Flashcard, StandardMCQCard, CompareContrastCard, DragAndDropSortingCard, FillInTheBlankCard, ShortAnswerCard, TwoTierMCQCard, CERCard, SequencingCard, Topic, Deck, StudyMode, DeckProgress, BloomLevel, UserPowerUps, PowerUpType, PurchaseCounts, CardFormat, UserXpStats, UserSettings, GlobalProgress } from '@/stitch/types';
 import { Loader2, ArrowLeft, ArrowRight, Check, X, PartyPopper, Lightbulb, History, SkipForward, ShieldAlert, Award } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
-import { getDeck, logCardAttempt, getUserDeckProgress, saveUserDeckProgress, getDeckPurchaseCounts, purchasePowerUp, getUserXpStats, getCardsForDeckByBloomLevel, getCardById } from '@/lib/firestore';
+import { getDeck, logCardAttempt, getUserDeckProgress, saveUserDeckProgress, getDeckPurchaseCounts, purchasePowerUp, getUserXpStats, getCardsForDeckByBloomLevel, getCardById, getUserProgress } from '@/lib/firestore';
 import { getDb } from '@/lib/firebase';
 import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -31,9 +31,10 @@ import {
 import { StudyMissionLayout } from '@/components/StudyMissionLayout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StudyCard } from '@/components/StudyCard';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, deleteDoc } from 'firebase/firestore';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { getOrCreateQuestSession, ensureLevelOrder, advance } from "@/lib/quest";
+import MissionComplete from '@/components/MissionComplete';
 
 
 export default function QuestPage() {
@@ -45,68 +46,62 @@ export default function QuestPage() {
   const [checking, setChecking] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const [globalProgress, setGlobalProgress] = useState<GlobalProgress | null>(null);
+
+  const fetchSession = useCallback(async () => {
+    if (!user?.uid || !deckId) return;
+    setLoading(true);
+    try {
+      const { global } = await getUserProgress(user.uid);
+      setGlobalProgress(global);
+      const s = await getOrCreateQuestSession({
+        uid: user.uid,
+        deckId,
+        fetchCardsByLevel: (lvl) => getCardsForDeckByBloomLevel(user.uid, deckId, lvl)
+      });
+      
+      if (s.completedLevels.length === s.levels.length && s.levels.length > 0) {
+         setSession(s);
+         setCurrentCard(null); // No more cards
+         setLoading(false);
+         return;
+      }
+
+      await ensureLevelOrder({
+        uid: user.uid,
+        deckId,
+        level: s.currentLevel as BloomLevel,
+        fetchCardsByLevel: (lvl) => getCardsForDeckByBloomLevel(user.uid, deckId, lvl)
+      });
+      
+      const updatedSession = await getOrCreateQuestSession({
+          uid: user.uid,
+          deckId,
+          fetchCardsByLevel: (lvl) => getCardsForDeckByBloomLevel(user.uid, deckId, lvl)
+      });
+
+      const order = updatedSession.progressByLevel[updatedSession.currentLevel] as string[];
+      const cardId = order[updatedSession.currentIndex];
+      const card = cardId ? await getCardById(user.uid, deckId, cardId) : null;
+
+      setSession(updatedSession);
+      setCurrentCard(card);
+    } catch (error) {
+      console.error("Error setting up quest session:", error);
+      toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not load your Quest session. Please try again."
+      });
+      router.push(`/decks/${deckId}/study`);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.uid, deckId, toast, router]);
 
   useEffect(() => {
-    if (!user?.uid || !deckId) return;
-    let cancelled = false;
-
-    (async () => {
-      setLoading(true);
-      try {
-        const s = await getOrCreateQuestSession({
-          uid: user.uid,
-          deckId,
-          fetchCardsByLevel: (lvl) => getCardsForDeckByBloomLevel(user.uid, deckId, lvl)
-        });
-        
-        if (s.completedLevels.length === s.levels.length) {
-          if (!cancelled) {
-             setSession(s);
-             setCurrentCard(null); // No more cards
-             setLoading(false);
-          }
-          return;
-        }
-
-        await ensureLevelOrder({
-          uid: user.uid,
-          deckId,
-          level: s.currentLevel as BloomLevel,
-          fetchCardsByLevel: (lvl) => getCardsForDeckByBloomLevel(user.uid, deckId, lvl)
-        });
-        
-        // Re-fetch session data after ensuring level order to get the updated totalCards
-        const updatedSession = await getOrCreateQuestSession({
-            uid: user.uid,
-            deckId,
-            fetchCardsByLevel: (lvl) => getCardsForDeckByBloomLevel(user.uid, deckId, lvl)
-        });
-
-        const order = updatedSession.progressByLevel[updatedSession.currentLevel] as string[];
-        const cardId = order[updatedSession.currentIndex];
-        const card = cardId ? await getCardById(user.uid, deckId, cardId) : null;
-
-        if (!cancelled) {
-          setSession(updatedSession);
-          setCurrentCard(card);
-        }
-      } catch (error) {
-        console.error("Error setting up quest session:", error);
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not load your Quest session. Please try again."
-        });
-        router.push(`/decks/${deckId}/study`);
-      } finally {
-        if (!cancelled) {
-            setLoading(false);
-        }
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [user?.uid, deckId, toast, router]);
+    fetchSession();
+  }, [fetchSession]);
 
   const percentOverall = useMemo(() => {
     if (!session?.totalCards || session.totalCards === 0) return 0;
@@ -128,7 +123,7 @@ export default function QuestPage() {
       fetchCardsByLevel: (lvl) => getCardsForDeckByBloomLevel(user.uid, deckId, lvl)
     });
     
-    if (s.completedLevels.length === s.levels.length) {
+    if (s.completedLevels.length === s.levels.length && s.levels.length > 0) {
         setSession(s);
         setCurrentCard(null);
         setChecking(false);
@@ -158,6 +153,15 @@ export default function QuestPage() {
   }, [user, session, deckId]);
 
 
+  const handleRestart = async () => {
+    if (!user?.uid || !deckId) return;
+    setLoading(true);
+    const sessionRef = doc(db, "users", user.uid, "questSessions", deckId);
+    await deleteDoc(sessionRef);
+    fetchSession(); // This will re-create the session
+  };
+
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -168,25 +172,17 @@ export default function QuestPage() {
 
   if (!currentCard) {
      return (
-       <main className="container mx-auto max-w-2xl p-4 py-8 text-center">
-         <Card className="p-8">
-            <CardHeader>
-                <PartyPopper className="h-16 w-16 text-primary mx-auto" />
-                <CardTitle className="text-3xl font-bold mt-4">Quest Complete!</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-muted-foreground mb-6">You've mastered all levels in this deck. Outstanding work, Agent.</p>
-                <div className="flex justify-center gap-4">
-                    <Button asChild>
-                        <Link href="/dashboard">View Progress</Link>
-                    </Button>
-                    <Button asChild variant="secondary">
-                        <Link href={`/decks/${deckId}/study`}>Back to Missions</Link>
-                    </Button>
-                </div>
-            </CardContent>
-         </Card>
-       </main>
+        <MissionComplete
+            modeName="Quest"
+            deckName={session?.deckTitle || "Deck"}
+            xp={150} // Placeholder
+            coins={75} // Placeholder
+            accuracy={92} // Placeholder
+            questionsAnswered={session?.totalCards || 0}
+            onReturnHQ={() => router.push('/dashboard')}
+            onRestartMission={handleRestart}
+            globalProgress={globalProgress}
+        />
     )
   }
 
