@@ -1,5 +1,6 @@
 
 
+
 import { 
   getUserProgress as _getUserProgress,
   getTopics as _getTopics,
@@ -20,9 +21,9 @@ import {
   purchasePowerUp
 } from "../stitch/lib/firestore";
 
-import type { GlobalProgress as AppGlobalProgress, SelectedCustomizations } from "@/types";
+import type { GlobalProgress as AppGlobalProgress, SelectedCustomizations, BloomLevel, Flashcard } from "@/types";
 import type { Topic as StitchTopic, UserDeckProgress } from "@/stitch/types";
-import { onSnapshot, query, collection, where, doc } from "firebase/firestore";
+import { onSnapshot, query, collection, where, doc, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase"; // make sure this path is correct
 
 /** Fix: typed wrapper so global always matches our app's type */
@@ -64,6 +65,39 @@ export function getUserCustomizations(
   });
 }
 
+/**
+ * Fetches all cards for a specific deck, filtered by a specific Bloom's Level.
+ * @param uid The user's ID.
+ * @param deckId The deck's ID.
+ * @param level The Bloom's Level to filter by.
+ * @returns A promise that resolves to an array of Flashcard objects.
+ */
+export async function getCardsForDeckByBloomLevel(uid: string, deckId: string, level: BloomLevel): Promise<Flashcard[]> {
+    const cardsQuery = query(
+        collection(db, 'userTopics', uid, 'decks', deckId, 'cards'),
+        where('bloomLevel', '==', level)
+    );
+    const cardsSnap = await getDocs(cardsQuery);
+    return cardsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Flashcard));
+}
+
+/**
+ * Fetches a single card by its ID from within a deck's subcollection.
+ * @param uid The user's ID.
+ * @param deckId The deck's ID.
+ * @param cardId The card's ID.
+ * @returns A promise that resolves to the Flashcard object, or null if not found.
+ */
+export async function getCardById(uid: string, deckId: string, cardId: string): Promise<Flashcard | null> {
+    const cardRef = doc(db, 'userTopics', uid, 'decks', deckId, 'cards', cardId);
+    const cardSnap = await getDoc(cardRef);
+    if (cardSnap.exists()) {
+        return { id: cardSnap.id, ...cardSnap.data() } as Flashcard;
+    }
+    return null;
+}
+
+
 // Re-export other helpers
 export {
   getDeck,
@@ -84,5 +118,3 @@ export {
 };
 
 export type { UserDeckProgress };
-
-    

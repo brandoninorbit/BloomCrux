@@ -91,7 +91,8 @@ export default function StudyHubPage() {
     const deckLevel = progress?.level || 1;
     const deckXp = progress?.xp || 0;
     const deckXpToNext = progress?.xpToNext || 100;
-    const hasStartedQuest = progress && progress.lastCardIndex > 0;
+    const hasStartedQuest = progress && progress.lastCardIndex > 0 && progress.mode === 'quest';
+    const hasStartedRemix = progress && progress.randomOrder && progress.randomOrder.length > 0 && progress.mode === 'remix';
 
     return (
         <main className="min-h-screen bg-gray-50/50">
@@ -121,14 +122,20 @@ export default function StudyHubPage() {
                     >
                         {hasStartedQuest ? (
                             <>
-                                <Button className="w-full" disabled>Continue Mission</Button>
-                                <Button variant="ghost" className="w-full" disabled>
-                                    <RefreshCw className="mr-2 h-4 w-4" />
-                                    Restart Mission
+                                <Button className="w-full" asChild>
+                                    <Link href={`/decks/${deckId}/study/quest`}>Continue Mission</Link>
+                                </Button>
+                                <Button variant="ghost" className="w-full" asChild>
+                                    <Link href={`/decks/${deckId}/study/quest?new=true`}>
+                                        <RefreshCw className="mr-2 h-4 w-4" />
+                                        Restart Mission
+                                    </Link>
                                 </Button>
                             </>
                         ) : (
-                            <Button className="w-full" disabled>Begin Mission</Button>
+                            <Button className="w-full" asChild>
+                                <Link href={`/decks/${deckId}/study/quest?new=true`}>Begin Mission</Link>
+                            </Button>
                         )}
                     </MissionCard>
                     <MissionCard
@@ -136,42 +143,60 @@ export default function StudyHubPage() {
                         title="Operation: Random Remix"
                         description="A chaotic encounter. All intel is randomized."
                     >
-                         <Button className="w-full" disabled>Begin Mission</Button>
+                         {hasStartedRemix ? (
+                             <Button className="w-full" asChild>
+                                <Link href={`/decks/${deckId}/study/remix`}>Continue Mission</Link>
+                            </Button>
+                         ) : (
+                             <Button className="w-full" asChild>
+                                <Link href={`/decks/${deckId}/study/remix?new=true`}>Begin Mission</Link>
+                            </Button>
+                         )}
                     </MissionCard>
                     <MissionCard
                         icon={Target}
                         title="Operation: Target Practice"
                         description="Hone your skills by focusing on known weak points."
                     >
-                         <Button className="w-full" disabled>Engage Target (25 cards)</Button>
+                         <Button className="w-full" asChild>
+                            <Link href={`/decks/${deckId}/study/practice`}>Engage Targets</Link>
+                        </Button>
                     </MissionCard>
                      <MissionCard
                         icon={Star}
                         title="Operation: Starred Assets"
                         description="Review high-value intel you've personally marked."
                     >
-                         <Button className="w-full" disabled>Review Starred</Button>
+                         <Button className="w-full" asChild>
+                            <Link href={`/decks/${deckId}/study/starred`}>Review Starred</Link>
+                        </Button>
                     </MissionCard>
                      <MissionCard
                         icon={Timer}
                         title="Operation: Timed Drill"
                         description="A high-pressure speed trial. Answer before the clock runs out."
                     >
-                         <Button className="w-full" disabled>Start Drill</Button>
+                         <Button className="w-full" asChild>
+                           <Link href={`/decks/${deckId}/study/timed`}>Start Drill</Link>
+                        </Button>
                     </MissionCard>
                      <MissionCard
                         icon={BookOpen}
                         title="Operation: Level Up"
                         description="Advance your clearance one cognitive level at a time."
                     >
-                         <Button className="w-full" disabled>Enter Level-Up</Button>
+                         <Button className="w-full" asChild>
+                            <Link href={`/decks/${deckId}/study/level-up`}>Enter Level-Up</Link>
+                        </Button>
                     </MissionCard>
                     <MissionCard
                         icon={Rocket}
                         title="Operation: Topic Trek"
                         description="Infiltrate specific subjects by topic tag."
                     >
-                         <Button className="w-full" disabled>Explore Topics</Button>
+                         <Button className="w-full" asChild>
+                            <Link href={`/decks/${deckId}/study/topic-trek`}>Explore Topics</Link>
+                        </Button>
                     </MissionCard>
                 </div>
             </div>
