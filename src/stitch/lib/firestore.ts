@@ -15,6 +15,7 @@
 
 
 
+
 import { collection, getDocs, query, where, addDoc, serverTimestamp, Timestamp, doc, setDoc, getDoc, runTransaction, writeBatch, increment, deleteDoc, onSnapshot, Unsubscribe, collectionGroup, orderBy, limit } from 'firebase/firestore';
 import { getDb, getFirebaseStorage, getFirebaseAuth } from './firebase';
 import type { Flashcard, CardAttempt, Topic, UserDeckProgress, UserPowerUps, Deck, BloomLevel, PowerUpType, PurchaseCounts, GlobalProgress, ShopItem, UserInventory, UserXpStats, UserCustomizations, SelectedCustomizations, UserSettings } from '../types';
@@ -24,7 +25,6 @@ import { getStreakBonus } from './xp';
 import { toast } from '@/hooks/use-toast';
 import { type User, updateProfile } from 'firebase/auth';
 import { avatarFrames } from '@/config/avatarFrames';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 /**
  * Recursively removes keys with `undefined` values from an object or an array of objects.
@@ -779,35 +779,4 @@ export async function saveSelectedCustomizations(userId: string, selections: Par
     const db = getDb();
     const docRef = doc(db, 'users', userId, 'customizations', 'selected');
     await setDoc(docRef, sanitizeForFirestore(selections), { merge: true });
-}
-
-
-/**
- * Uploads a new profile photo to Storage, updates the Firebase Auth user,
- * forces a reload of the user, and returns the fresh User object.
- */
-export async function uploadProfilePhotoAndUpdateAuth(
-  user: User,
-  file: File
-): Promise<User> {
-  const storage = getFirebaseStorage();
-  const auth = getFirebaseAuth();
-
-  // Create a path like 'profilePhotos/{uid}/{filename}'
-  const photoRef = storageRef(storage, `profilePhotos/${user.uid}/${file.name}`);
-
-  // 1) Upload the bytes
-  await uploadBytes(photoRef, file);
-
-  // 2) Get public URL
-  const photoURL = await getDownloadURL(photoRef);
-
-  // 3) Update the Auth user’s profile
-  await updateProfile(auth.currentUser!, { photoURL });
-
-  // 4) Force Firebase to reload its currentUser from server
-  await auth.currentUser!.reload();
-
-  // 5) Return the fresh user
-  return auth.currentUser!;
 }

@@ -10,10 +10,44 @@ import { Button } from './ui/button';
 import { Label } from './ui/label';
 import { Loader2, KeyRound, Link as LinkIcon, User, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { updateProfile } from 'firebase/auth';
+import { updateProfile, type User as FirebaseUser } from 'firebase/auth';
 import { Separator } from './ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { uploadProfilePhotoAndUpdateAuth } from '@/lib/firestore';
+import { getFirebaseStorage, getFirebaseAuth } from '@/lib/firebase';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+
+/**
+ * Uploads a new profile photo to Storage, updates the Firebase Auth user,
+ * forces a reload of the user, and returns the fresh User object.
+ */
+async function uploadProfilePhotoAndUpdateAuth(
+  user: FirebaseUser,
+  file: File
+): Promise<FirebaseUser> {
+  const storage = getFirebaseStorage();
+  const auth = getFirebaseAuth();
+
+  // Create a path like 'profilePhotos/{uid}/{filename}'
+  const photoRef = storageRef(storage, `profilePhotos/${user.uid}/${file.name}`);
+
+  // 1) Upload the bytes
+  await uploadBytes(photoRef, file);
+
+  // 2) Get public URL
+  const photoURL = await getDownloadURL(photoRef);
+
+  // 3) Update the Auth user’s profile
+  if (auth.currentUser) {
+    await updateProfile(auth.currentUser, { photoURL });
+    // 4) Force Firebase to reload its currentUser from server
+    await auth.currentUser.reload();
+    // 5) Return the fresh user
+    return auth.currentUser;
+  }
+  
+  throw new Error("User not found after upload");
+}
+
 
 export default function ProfileSettings() {
   const { user, forceReloadUser } = useUserAuth();
@@ -57,21 +91,15 @@ export default function ProfileSettings() {
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("Ã°Å¸â€â€ handleFileChange fired", event.target.files);
     const file = event.target.files?.[0];
-    console.log("Ã°Å¸â€â€ selected file:", file);
     if (file && user) {
       toast({ title: 'Uploading...', description: 'Your new photo is being uploaded.' });
       try {
-        console.log("Ã°Å¸â€â€ calling uploadProfilePhotoAndUpdateAuth");
-        const freshUser = await uploadProfilePhotoAndUpdateAuth(user, file);
-        console.log("Ã°Å¸â€â€ upload complete, freshUser.photoURL =", freshUser.photoURL);
+        await uploadProfilePhotoAndUpdateAuth(user, file);
         toast({ title: 'Success!', description: 'Your profile photo has been updated.' });
-        console.log("Ã°Å¸â€â€ calling forceReloadUser");
         await forceReloadUser();
-        console.log("Ã°Å¸â€â€ forceReloadUser done, context user.photoURL =", user?.photoURL);
       } catch (err: any) {
-        console.error("Ã°Å¸â€â€ upload error", err);
+        console.error("Upload error", err);
         toast({ variant: 'destructive', title: 'Upload Failed', description: err.message });
       }
     }
