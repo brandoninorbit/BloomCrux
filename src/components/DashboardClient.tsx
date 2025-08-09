@@ -135,7 +135,7 @@ export default function DashboardClient() {
                     current.lastStudied = attempt.timestamp;
                 }
 
-                const level = attempt.bloomLevel;
+                const level = attempt.bloomLevel as BloomLevel;
                 if (!current.bloomMastery[level]) {
                     current.bloomMastery[level] = { correct: 0, total: 0 };
                 }
@@ -166,7 +166,8 @@ export default function DashboardClient() {
 
         source.forEach(deck => {
             if (deck.isMastered) masteredDecks++;
-            Object.values(deck.bloomMastery ?? {}).forEach(level => {
+            const bm = deck.bloomMastery as Partial<Record<BloomLevel, { correct: number; total: number }>>;
+            Object.values(bm ?? {}).forEach(level => {
                 if (level && typeof level.total === "number") totalReviewed += level.total;
             });
         });

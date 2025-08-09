@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
-import type { Flashcard } from '@/types';
+import type { Deck } from '@/types';
 import Link from 'next/link';
 
 // Mock data has been removed to avoid confusion.
@@ -20,7 +20,7 @@ const reviewDecks: any[] = [
 ];
 
 interface DueForReviewCardProps {
-  decks: Flashcard[]; // We accept the decks prop for future dynamic use
+  decks: Deck[]; // We accept the decks prop for future dynamic use
 }
 
 
@@ -68,5 +68,3 @@ export function DueForReviewCard({ decks }: DueForReviewCardProps) {
     </Card>
   );
 }
-
-

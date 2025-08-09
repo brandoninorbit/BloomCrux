@@ -72,14 +72,17 @@ export default function LevelUpPage() {
 
                 if(deckAttempts.length > 0) {
                     deckMastery.lastStudied = new Date(Math.max(...deckAttempts.map(a => a.timestamp.getTime())));
+                    const bloomMastery: Partial<Record<BloomLevel, { correct: number; total: number }>> = {};
                     deckAttempts.forEach(attempt => {
-                        if (!deckMastery.bloomMastery[attempt.bloomLevel]) {
-                            deckMastery.bloomMastery[attempt.bloomLevel] = { correct: 0, total: 0 };
+                        const level = attempt.bloomLevel as BloomLevel;
+                        if (!bloomMastery[level]) {
+                            bloomMastery[level] = { correct: 0, total: 0 };
                         }
-                        const mastery = deckMastery.bloomMastery[attempt.bloomLevel]!;
+                        const mastery = bloomMastery[level]!;
                         mastery.total++;
                         if (attempt.wasCorrect) mastery.correct++;
                     });
+                    deckMastery.bloomMastery = bloomMastery;
                 }
                 setOverallProgress(deckMastery);
 
@@ -155,7 +158,8 @@ export default function LevelUpPage() {
             </div>
             <div className="space-y-4">
                 {bloomOrder.map(level => {
-                    const progress = overallProgress?.bloomMastery?.[level];
+                    const bm = overallProgress?.bloomMastery as Partial<Record<BloomLevel, { correct: number; total: number }>>;
+                    const progress = bm?.[level];
                     const accuracy = progress && progress.total > 0 ? (progress.correct / progress.total) : 0;
                     const isMasteredByAccuracy = accuracy >= masteryThreshold;
                     const isUnlockedByTokens = unlockedByTokens.includes(level);
