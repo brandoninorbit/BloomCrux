@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
-import type { Deck, Flashcard, CardFormat, CERPart, DndItem } from '@/stitch/types';
+import type { Deck, Flashcard, CardFormat, CERPart, DndItem, BloomLevel } from '@/stitch/types';
 import { getDeck, saveDeck } from '@/lib/firestore';
 import { Loader2, PlusCircle, Star, Upload, Info, Trash2, FileText, Eye } from 'lucide-react';
 import Link from 'next/link';
@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Function to transform a parsed CSV row into a Flashcard object
 const transformRowToCard = (row: any): Flashcard | null => {
@@ -167,6 +168,9 @@ export default function EditDeckPage() {
 
   // State for deleting sources
   const [sourceToDelete, setSourceToDelete] = useState<string | null>(null);
+
+  // State for sorting
+  const [sortOrder, setSortOrder] = useState('Default');
 
   useEffect(() => {
     const fetchDeckData = async () => {
@@ -332,6 +336,22 @@ export default function EditDeckPage() {
     });
     setSourceToDelete(null); // Close dialog
   }
+
+  const sortedCards = useMemo(() => {
+    const bloomOrder: BloomLevel[] = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'];
+    
+    switch (sortOrder) {
+        case 'Bloom\'s Level':
+            return [...cards].sort((a, b) => bloomOrder.indexOf(a.bloomLevel) - bloomOrder.indexOf(b.bloomLevel));
+        case 'Card Format':
+            return [...cards].sort((a, b) => a.cardFormat.localeCompare(b.cardFormat));
+        case 'Source':
+            // Placeholder for when source is tracked per card
+            return cards;
+        default:
+            return cards;
+    }
+  }, [cards, sortOrder]);
   
   const starredCount = cards.filter(c => c.isStarred).length || 0;
   const mockSources = deck?.sources || ["questions_batch1_fixed.csv", "questions_batch2_fixed.csv", "questions_batch3_fixed.csv"];
@@ -483,7 +503,25 @@ export default function EditDeckPage() {
             </CardContent>
         </Card>
 
-        <h2 className="text-2xl font-bold">Cards in this Deck</h2>
+        <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Cards in this Deck</h2>
+            {cardsLoaded && (
+                <div className="flex items-center gap-2">
+                    <Label htmlFor="sort-order">Sort Cards By</Label>
+                    <Select value={sortOrder} onValueChange={setSortOrder}>
+                        <SelectTrigger id="sort-order" className="w-[180px]">
+                            <SelectValue placeholder="Sort by..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Default">Default</SelectItem>
+                            <SelectItem value="Bloom's Level">Bloom's Level</SelectItem>
+                            <SelectItem value="Card Format">Card Format</SelectItem>
+                            <SelectItem value="Source">Source</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            )}
+        </div>
         
         {!cardsLoaded ? (
             <Card className="text-center">
@@ -495,7 +533,7 @@ export default function EditDeckPage() {
                 </CardContent>
             </Card>
         ) : (
-            cards.map(card => (
+            sortedCards.map(card => (
                  <Card key={card.id}>
                     <CardContent className="p-4 flex justify-between items-center">
                         <div>
