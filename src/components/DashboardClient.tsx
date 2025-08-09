@@ -4,7 +4,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import type { Deck as DeckType, DeckProgress, BloomLevel, Topic, UserDeckProgress, GlobalProgress, UserPowerUps, UserXpStats, UserSettings } from '@/stitch/types';
-import { Loader2, User, BookOpen, Award, Coins, LineChart, ChevronDown, CheckCircle, Target, Zap, Vault, GripVertical, Rocket } from 'lucide-react';
+import { Loader2, User, BookOpen, Award, Coins, LineChart, ChevronDown, CheckCircle, Target, Zap, Vault, GripVertical, Rocket, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
 import Link from 'next/link';
@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import dynamic from 'next/dynamic';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import AgentCard from './AgentCard';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 const DevVaultPanel = dynamic(
@@ -342,6 +343,16 @@ const finalProgress = Object.values(progressByDeck).sort((a,b) => {
                     )}
                 </div>
                 
+                {showExample && !user && (
+                    <Alert variant="default" className="bg-blue-50 border-blue-200">
+                        <Info className="h-5 w-5 text-blue-700" />
+                        <AlertTitle className="text-blue-800 font-semibold">Viewing Mock Data</AlertTitle>
+                        <AlertDescription className="text-blue-700">
+                        You are currently viewing a demonstration of the dashboard. Please <Link href="/login" className="font-bold underline">log in</Link> to see your personal progress.
+                        </AlertDescription>
+                    </Alert>
+                )}
+
                 {xpStatsToDisplay && xpStatsToDisplay.bonusVault > 0 && (
                     <Card className="my-6 bg-yellow-50 border-yellow-300">
                         <CardContent className="p-4 flex items-center gap-4">
@@ -387,3 +398,5 @@ const finalProgress = Object.values(progressByDeck).sort((a,b) => {
         </div>
     );
 }
+
+    
