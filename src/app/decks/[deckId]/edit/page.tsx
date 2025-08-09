@@ -341,42 +341,45 @@ export default function EditDeckPage() {
 
   const groupedCards = useMemo(() => {
     if (sortOrder === 'Default' || !cards) {
-      return { 'default': cards || [] };
+        return { 'Default': cards || [] };
     }
-
-    const bloomOrder: BloomLevel[] = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'];
 
     const getGroupKey = (card: Flashcard): string => {
         if (sortOrder === 'Bloom\'s Level') {
-            const bloomMatch = (card.questionStem || '').match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i);
-            return bloomMatch ? bloomMatch[1] : card.bloomLevel || 'Uncategorized';
+            return card.bloomLevel || 'Uncategorized';
         }
-        return card.cardFormat || 'Uncategorized';
+        if (sortOrder === 'Card Format') {
+            return card.cardFormat || 'Uncategorized';
+        }
+        // Add other sort criteria here if needed
+        return 'Uncategorized';
     };
 
     const grouped = cards.reduce((acc, card) => {
-      const key = getGroupKey(card);
-      if (!acc[key]) {
-        acc[key] = [];
-      }
-      acc[key].push(card);
-      return acc;
+        const key = getGroupKey(card);
+        if (!acc[key]) {
+            acc[key] = [];
+        }
+        acc[key].push(card);
+        return acc;
     }, {} as Record<string, Flashcard[]>);
-    
+
+    // If sorting by Bloom's Level, ensure the groups are in the correct order
     if (sortOrder === 'Bloom\'s Level') {
-        const orderedGroup: Record<string, Flashcard[]> = {};
+        const bloomOrder: BloomLevel[] = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'];
+        const orderedGroups: Record<string, Flashcard[]> = {};
         bloomOrder.forEach(level => {
             if (grouped[level]) {
-                orderedGroup[level] = grouped[level];
+                orderedGroups[level] = grouped[level];
             }
         });
-        // Add any cards that might have had a weird bloomLevel value but were not in the predefined order
-        Object.keys(grouped).forEach(key => {
-            if (!orderedGroup[key]) {
-                orderedGroup[key] = grouped[key];
+         // Add any remaining groups (like 'Uncategorized')
+        for (const key in grouped) {
+            if (!orderedGroups[key]) {
+                orderedGroups[key] = grouped[key];
             }
-        });
-        return orderedGroup;
+        }
+        return orderedGroups;
     }
 
     return grouped;
@@ -404,17 +407,19 @@ export default function EditDeckPage() {
   const renderCard = (card: Flashcard) => {
     let prefix = '';
     if (sortOrder === 'Bloom\'s Level') {
-      const bloomMatch = (card.questionStem || '').match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i);
-      prefix = bloomMatch ? bloomMatch[0] : `[${card.bloomLevel}]`;
+        prefix = `[${card.bloomLevel}]`;
     } else if (sortOrder === 'Card Format') {
-      prefix = `[${card.cardFormat}]`;
+        prefix = `[${card.cardFormat}]`;
     }
     
+    // Remove the bracketed prefix from the question stem if it exists for display
+    const displayQuestion = (card.questionStem || '').replace(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]\s*/i, '');
+
     return (
         <Card key={card.id}>
             <CardContent className="p-4 flex justify-between items-center">
                 <div>
-                    <p className="font-semibold"><span className="text-muted-foreground mr-2">{prefix}</span>{card.questionStem.replace(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i, '').trim()}</p>
+                    <p className="font-semibold"><span className="text-muted-foreground mr-2">{prefix}</span>{displayQuestion}</p>
                     <p className="text-sm text-muted-foreground">{card.cardFormat}</p>
                 </div>
                 <div className="flex gap-1">
@@ -423,7 +428,9 @@ export default function EditDeckPage() {
                     </Button>
                     <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="hover:bg-destructive/10 hover:text-destructive" onClick={() => { /* Placeholder for delete */ alert(`Delete ${card.id}`)}}>
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
                 </div>
             </CardContent>
         </Card>
@@ -563,7 +570,7 @@ export default function EditDeckPage() {
         </Card>
 
         <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Cards in this Deck</h2>
+            <h2 className="text-2xl font-bold">Cards in this Deck ({cards.length})</h2>
             {cardsLoaded && (
                 <div className="flex items-center gap-2">
                     <Label htmlFor="sort-order">Sort Cards By</Label>
