@@ -135,54 +135,52 @@ export default function DecksPage() {
 
   return (
     <main className="py-8 relative">
-      <div className="w-full flex justify-center">
-        <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8 outline outline-1 outline-red-400">
-          <div className="space-y-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold">{heading}</h2>
-              {mode.kind === "recent" ? (
-                <div className="flex gap-2">
-                  <Button variant="secondary">New Set</Button>
-                  <Button>New Folder</Button>
-                </div>
-              ) : (
-                <Button variant="secondary" onClick={backToRecent}>Back to Recent Decks</Button>
-              )}
-            </div>
-
-            {/* Top grid (recent or folder decks) */}
-            <section>
-              {loading && (!decksToShow || decksToShow.length === 0) ? (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-                </div>
-              ) : decksToShow && decksToShow.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {decksToShow.map(d => (
-                    <a key={d.id} href={`/decks/${d.id}`} className="rounded-xl border p-6 hover:shadow-sm">
-                      {d.name}
-                    </a>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No decks yet.</p>
-              )}
-            </section>
-
-            {/* Folders list (always visible) */}
-            <section className="space-y-3">
-              <h3 className="text-xl font-semibold">Folders</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {folders.map(f => (
-                  <button key={f.id} onClick={() => openFolder(f)} className="rounded-2xl border p-4 text-left hover:shadow-sm">
-                    <div className="font-medium">{f.name}</div>
-                    <div className="text-xs text-muted-foreground">{f.count ?? "—"} sets</div>
-                  </button>
-                ))}
-                {folders.length === 0 && <p className="text-sm text-muted-foreground">No folders created yet.</p>}
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="space-y-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold">{heading}</h2>
+            {mode.kind === "recent" ? (
+              <div className="flex gap-2">
+                <Button variant="secondary">New Set</Button>
+                <Button>New Folder</Button>
               </div>
-            </section>
+            ) : (
+              <Button variant="secondary" onClick={backToRecent}>Back to Recent Decks</Button>
+            )}
           </div>
+
+          {/* Top grid (recent or folder decks) */}
+          <section>
+            {loading && (!decksToShow || decksToShow.length === 0) ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+              </div>
+            ) : decksToShow && decksToShow.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {decksToShow.map(d => (
+                  <a key={d.id} href={`/decks/${d.id}`} className="rounded-xl border p-6 hover:shadow-sm">
+                    {d.name}
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No decks yet.</p>
+            )}
+          </section>
+
+          {/* Folders list (always visible) */}
+          <section className="space-y-3">
+            <h3 className="text-xl font-semibold">Folders</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {folders.map(f => (
+                <button key={f.id} onClick={() => openFolder(f)} className="rounded-2xl border p-4 text-left hover:shadow-sm">
+                  <div className="font-medium">{f.name}</div>
+                  <div className="text-xs text-muted-foreground">{f.count ?? "—"} sets</div>
+                </button>
+              ))}
+              {folders.length === 0 && <p className="text-sm text-muted-foreground">No folders created yet.</p>}
+            </div>
+          </section>
         </div>
       </div>
     </main>
