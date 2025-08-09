@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -767,31 +768,27 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
                                       </div>
                                   ) : (
                                       <div className='space-y-2'>
-                                          {cerParts[partKey].options.map((opt, i) => (
-                                              <div key={i}>
-                                                  <Label htmlFor={`${partKey}-opt-${i}`}>Option {i + 1}</Label>
-                                                  <Input id={`${partKey}-opt-${i}`} value={opt} onChange={e => handleCerOptionChange(partKey, i, e.target.value)} />
+                                        <Label>Options & Correct Answer</Label>
+                                        <RadioGroup
+                                            value={String(cerParts[partKey].correctIndex)}
+                                            onValueChange={v => handleCerPartChange(partKey, 'correctIndex', Number(v))}
+                                            className="space-y-2"
+                                        >
+                                            {cerParts[partKey].options.map((opt, i) => (
+                                              <div key={i} className="flex items-center gap-2">
+                                                  <RadioGroupItem value={String(i)} id={`${partKey}-opt-item-${i}`} />
+                                                  <Input 
+                                                    id={`${partKey}-opt-${i}`} 
+                                                    value={opt} 
+                                                    onChange={e => handleCerOptionChange(partKey, i, e.target.value)}
+                                                    placeholder={`Option ${i+1}`}
+                                                  />
                                               </div>
                                           ))}
+                                        </RadioGroup>
                                           <Button variant="outline" size="sm" onClick={() => handleCerPartChange(partKey, 'options', [...cerParts[partKey].options, ''])}>
                                               <PlusCircle className="mr-2 h-4 w-4" /> Add Option
                                           </Button>
-                                          <div>
-                                              <Label htmlFor={`${partKey}-correct`}>Correct Option</Label>
-                                              <Select
-                                                value={String(cerParts[partKey].correctIndex)}
-                                                onValueChange={v => handleCerPartChange(partKey, 'correctIndex', Number(v))}
-                                              >
-                                                <SelectTrigger id={`${partKey}-correct`}>
-                                                    <SelectValue placeholder="Select correct answer" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {cerParts[partKey].options.map((opt, i) => (
-                                                        opt.trim() && <SelectItem key={i} value={String(i)}>Option {i + 1}: {opt}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                              </Select>
-                                          </div>
                                       </div>
                                   )}
                               </CardContent>
