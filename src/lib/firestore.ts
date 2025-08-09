@@ -1,4 +1,5 @@
 
+
 import { 
   getUserProgress as _getUserProgress,
   getTopics as _getTopics,
@@ -21,7 +22,7 @@ import {
 
 import type { GlobalProgress as AppGlobalProgress, SelectedCustomizations } from "@/types";
 import type { Topic as StitchTopic, UserDeckProgress } from "@/stitch/types";
-import { onSnapshot, query, collection, where } from "firebase/firestore";
+import { onSnapshot, query, collection, where, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase"; // make sure this path is correct
 
 /** Fix: typed wrapper so global always matches our app's type */
@@ -52,12 +53,11 @@ export function getUserCustomizations(
   uid: string,
   onSnap: (c: SelectedCustomizations | null) => void
 ): () => void {
-  const q = query(
-    collection(db, "users", uid, "customizations", "selected")
-  );
-  return onSnapshot(q, (snap) => {
-    if (snap.docs.length > 0) {
-      onSnap(snap.docs[0].data() as SelectedCustomizations);
+  // FIX: Path was pointing to a document, so use doc() instead of collection()
+  const docRef = doc(db, "users", uid, "customizations", "selected");
+  return onSnapshot(docRef, (doc) => {
+    if (doc.exists()) {
+      onSnap(doc.data() as SelectedCustomizations);
     } else {
       onSnap(null);
     }
