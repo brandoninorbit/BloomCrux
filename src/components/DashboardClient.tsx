@@ -48,11 +48,11 @@ const StatCard = ({ title, value, unit, icon, ...props }: { title: string, value
 
 const bloomOrder: BloomLevel[] = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'];
 
-const MOCK_GLOBAL_PROGRESS: GlobalProgress = { level: 5, xp: 250, xpToNext: 1000 };
+const MOCK_GLOBAL_PROGRESS: GlobalProgress = { level: 5, xp: 250, xpToNext: 1000, total: 0, reviewed: 0, percent: 0 };
 const MOCK_SETTINGS: UserSettings = { displayName: 'Mock User', email: 'mock@example.com', tokens: 1250, unlockedLevels: {} } as UserSettings;
 const MOCK_DECK_PROGRESS: DeckProgress[] = [
-    { deckId: 'mock1', deckName: 'Cellular Respiration', totalCards: 25, lastStudied: new Date(), isMastered: false, level: 3, xp: 40, xpToNext: 150, bloomMastery: { 'Remember': { correct: 8, total: 10 }, 'Understand': { correct: 5, total: 7 }}},
-    { deckId: 'mock2', deckName: 'Photosynthesis', totalCards: 30, lastStudied: new Date(), isMastered: true, level: 5, xp: 110, xpToNext: 200, bloomMastery: { 'Remember': { correct: 10, total: 10 }, 'Understand': { correct: 9, total: 10 }, 'Apply': {correct: 8, total: 10 }}},
+    { deckId: 'mock1', deckName: 'Cellular Respiration', totalCards: 25, lastStudied: Timestamp.now(), isMastered: false, level: 3, xp: 40, xpToNext: 150, bloomMastery: { 'Remember': { correct: 8, total: 10 }, 'Understand': { correct: 5, total: 7 }}},
+    { deckId: 'mock2', deckName: 'Photosynthesis', totalCards: 30, lastStudied: Timestamp.now(), isMastered: true, level: 5, xp: 110, xpToNext: 200, bloomMastery: { 'Remember': { correct: 10, total: 10 }, 'Understand': { correct: 9, total: 10 }, 'Apply': {correct: 8, total: 10 }}},
 ];
 const MOCK_XP_STATS: UserXpStats = { sessionXP: 120, dailyXP: 850, bonusVault: 50, commanderXP: (MOCK_GLOBAL_PROGRESS?.xp ?? 0), sessionStart: Timestamp.now(), lastDailyReset: Timestamp.now(), isXpBoosted: true };
 
@@ -102,62 +102,56 @@ export default function DashboardClient() {
             setGlobalProgress((userProgress as any).global as GlobalProgress);
             setXpStats(userXpStats);
 
-            const allDecksRaw: any[] = Array.isArray(userTopics)
-                ? userTopics.flatMap((t: any) => Array.isArray(t?.decks) ? t.decks : [])
-                : [];
-
-            const decksArr: any[] = Array.isArray(allDecksRaw)
-                ? allDecksRaw
-                : (allDecksRaw ? Object.values(allDecksRaw as any) : []);
+            const allDecks: DeckType[] = userTopics.flatMap(t => t.decks || []);
 
             const progressByDeck: { [deckId: string]: DeckProgress } = {};
 
-            // iterate decks
-            for (const deck of (decksArr as any[])) {
-            const key: string = String((deck as any)?.id ?? (deck as any)?.deckId ?? "");
-            if (!key) continue;
-
-            const name: string = String((deck as any)?.title ?? (deck as any)?.deckName ?? "Unknown Deck");
-            const decksById = (userProgress.decks ?? {}) as unknown as Record<string, { level: number; xp: number; xpToNext: number }>;
-            const deckSpecificProgress = decksById[key] ?? { level: 1, xp: 0, xpToNext: 100 };
-
-            progressByDeck[key] = {
-                deckId: key,
-                deckName: name,
-                totalCards: Array.isArray((deck as any)?.cards)
-                ? (deck as any).cards.length
-                : (Array.isArray((deck as any)?.cardIds) ? (deck as any).cardIds.length : 0),
-                isMastered: Boolean((deck as any)?.isMastered),
-                lastStudied: new Date(0),
-                bloomMastery: {},
-                ...deckSpecificProgress,
-            };
+            // Initialize progress for all decks from the topics data
+            for (const deck of allDecks) {
+                if (!deck || !deck.id) continue;
+                const deckSpecificProgress = (userProgress.decks ?? {})[deck.id] || { level: 1, xp: 0, xpToNext: 100 };
+                
+                progressByDeck[deck.id] = {
+                    deckId: deck.id,
+                    deckName: deck.title,
+                    totalCards: deck.cards?.length || 0,
+                    isMastered: deck.isMastered || false,
+                    lastStudied: new Date(0), // Default value
+                    bloomMastery: {},
+                    ...deckSpecificProgress,
+                };
             }
 
-            // fold in attempts
-            for (const attempt of (attempts as any[])) {
-                const aid: string = String(attempt?.deckId ?? attempt?.deck_id ?? attempt?.deckID ?? "");
-                if (!aid) continue;
-                const current = progressByDeck[aid];
-                if (!current) continue;
+            // Fold in attempt data
+            for (const attempt of attempts) {
+                if (!attempt.deckId || !progressByDeck[attempt.deckId]) continue;
 
-                const ts: Date = attempt?.timestamp instanceof Timestamp ? attempt.timestamp.toDate() : new Date(0);
-                const last = current.lastStudied ? new Date(current.lastStudied as any) : new Date(0);
-                if (ts > last) current.lastStudied = ts;
+                const current = progressByDeck[attempt.deckId];
+                
+                const attemptTimestamp = attempt.timestamp instanceof Timestamp ? attempt.timestamp.toDate() : new Date(0);
+                const lastStudiedTimestamp = current.lastStudied instanceof Timestamp ? current.lastStudied.toDate() : new Date(current.lastStudied);
 
-                const lvl: BloomLevel = (String(attempt?.bloomLevel ?? attempt?.level ?? "Unknown") as BloomLevel);
-                const bm = (current.bloomMastery ?? (current.bloomMastery = {})) as Record<BloomLevel, { correct: number; total: number }>;
-                if (!bm[lvl]) bm[lvl] = { correct: 0, total: 0 };
-                const m = bm[lvl]!;
-                m.total += 1;
-                if (Boolean(attempt?.wasCorrect)) m.correct += 1;
+                if (attemptTimestamp > lastStudiedTimestamp) {
+                    current.lastStudied = attempt.timestamp;
+                }
+
+                const level = attempt.bloomLevel;
+                if (!current.bloomMastery[level]) {
+                    current.bloomMastery[level] = { correct: 0, total: 0 };
+                }
+                const mastery = current.bloomMastery[level]!;
+                mastery.total += 1;
+                if (attempt.wasCorrect) {
+                    mastery.correct += 1;
+                }
             }
-
+            
             const finalProgress = Object.values(progressByDeck).sort((a,b) => {
-                const at = a.lastStudied ? new Date(a.lastStudied as any).getTime() : 0;
-                const bt = b.lastStudied ? new Date(b.lastStudied as any).getTime() : 0;
-                return bt - at;
+                const aTime = a.lastStudied instanceof Timestamp ? a.lastStudied.toMillis() : new Date(a.lastStudied).getTime();
+                const bTime = b.lastStudied instanceof Timestamp ? b.lastStudied.toMillis() : new Date(b.lastStudied).getTime();
+                return bTime - aTime;
             });
+
 
             setDeckProgress(finalProgress);
             setIsLoading(false);
@@ -188,8 +182,44 @@ export default function DashboardClient() {
         );
     }
     
-    // If not logged in, showExample will be true, otherwise check user status for the button.
-    const showExampleButton = !!user;
+    if (!user) {
+         return (
+             <div className="container mx-auto px-6 py-12">
+                <div className="max-w-5xl mx-auto space-y-8">
+                     <Alert variant="default" className="bg-blue-50 border-blue-200">
+                        <Info className="h-5 w-5 text-blue-700" />
+                        <AlertTitle className="text-blue-800 font-semibold">Viewing Mock Data</AlertTitle>
+                        <AlertDescription className="text-blue-700">
+                        This is a preview of the dashboard. Please <Link href="/login" className="font-bold underline">log in</Link> to see your personal progress.
+                        </AlertDescription>
+                    </Alert>
+                    <Card>
+                        <CardHeader className="flex-row items-center justify-between p-4">
+                            <CardTitle>Commander Overview</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 pt-0">
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="md:col-span-2 flex flex-col gap-6">
+                                    <GlobalProgressHeader global={MOCK_GLOBAL_PROGRESS} xpStats={MOCK_XP_STATS} />
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 h-full">
+                                        <StatCard title="Total Cards Reviewed" value={MOCK_DECK_PROGRESS.reduce((sum, deck) => sum + Object.values(deck.bloomMastery).reduce((s, l) => s + l.total, 0), 0)} icon={<BookOpen />} />
+                                        <StatCard title="Decks Mastered" value={MOCK_DECK_PROGRESS.filter(d => d.isMastered).length} icon={<Award />} />
+                                    </div>
+                                </div>
+                                <div className="md:col-span-1 h-full">
+                                    <AgentCard 
+                                        globalProgress={MOCK_GLOBAL_PROGRESS} 
+                                        settings={{displayName: MOCK_SETTINGS.displayName ?? "", tokens: MOCK_SETTINGS.tokens ?? 0}}
+                                        photoURL={null}
+                                    />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+             </div>
+         );
+    }
 
     const progressToDisplay = showExample ? MOCK_DECK_PROGRESS : deckProgress;
     const globalProgressToDisplay = showExample ? MOCK_GLOBAL_PROGRESS : globalProgress;
@@ -338,19 +368,19 @@ export default function DashboardClient() {
                         <h1 className="text-3xl font-headline text-foreground mb-1">Commander Debriefing</h1>
                         <p className="text-base text-muted-foreground font-body">Review your overall performance and deck-specific mastery levels.</p>
                     </div>
-                    {showExampleButton && (
+                    {user && (
                          <Button variant="link" onClick={() => setShowExample(!showExample)}>
                             {showExample ? 'Hide Example' : 'Show Example Data'}
                         </Button>
                     )}
                 </div>
                 
-                {showExample && !user && (
+                {showExample && user && (
                     <Alert variant="default" className="bg-blue-50 border-blue-200">
                         <Info className="h-5 w-5 text-blue-700" />
                         <AlertTitle className="text-blue-800 font-semibold">Viewing Mock Data</AlertTitle>
                         <AlertDescription className="text-blue-700">
-                        You are currently viewing a demonstration of the dashboard. Please <Link href="/login" className="font-bold underline">log in</Link> to see your personal progress.
+                        You are currently viewing a demonstration of the dashboard. Click "Hide Example" to see your real progress.
                         </AlertDescription>
                     </Alert>
                 )}
@@ -400,5 +430,7 @@ export default function DashboardClient() {
         </div>
     );
 }
+
+    
 
     
