@@ -81,6 +81,8 @@ export default function DashboardClient() {
 
         const fetchProgress = async () => {
             if (!user) {
+                // If user is not logged in, use mock data by default
+                setShowExample(true);
                 setIsLoading(false);
                 return;
             };
@@ -157,12 +159,7 @@ const finalProgress = Object.values(progressByDeck).sort((a,b) => {
             setDeckProgress(finalProgress);
             setIsLoading(false);
         };
-
-        if (user) {
-            fetchProgress();
-        } else {
-            setIsLoading(false);
-        }
+        fetchProgress();
     }, [user]);
 
     const overallStats = useMemo(() => {
@@ -187,30 +184,9 @@ const finalProgress = Object.values(progressByDeck).sort((a,b) => {
             </div>
         );
     }
-
-    if (!user) {
-        return (
-            <div className="container mx-auto flex max-w-4xl flex-col items-center justify-center p-4 py-8 text-center">
-                <Card className="w-full text-center shadow-lg p-8">
-                    <CardHeader>
-                        <User className="mx-auto h-16 w-16 text-primary" />
-                        <CardTitle className="font-headline text-2xl mt-4">View Your Progress</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground mb-6">Please log in or sign up to track and view your study progress.</p>
-                        <div className="flex justify-center gap-4">
-                            <Button asChild>
-                               <Link href="/login">Login</Link>
-                            </Button>
-                             <Button asChild variant="secondary">
-                               <Link href="/signup">Sign Up</Link>
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
+    
+    // If not logged in, showExample will be true, otherwise check user status for the button.
+    const showExampleButton = !!user;
 
     const progressToDisplay = showExample ? MOCK_DECK_PROGRESS : deckProgress;
     const globalProgressToDisplay = showExample ? MOCK_GLOBAL_PROGRESS : globalProgress;
@@ -359,9 +335,11 @@ const finalProgress = Object.values(progressByDeck).sort((a,b) => {
                         <h1 className="text-3xl font-headline text-foreground mb-1">Commander Debriefing</h1>
                         <p className="text-base text-muted-foreground font-body">Review your overall performance and deck-specific mastery levels.</p>
                     </div>
-                     <Button variant="link" onClick={() => setShowExample(!showExample)}>
-                        {showExample ? 'Hide Example' : 'Show Example Data'}
-                    </Button>
+                    {showExampleButton && (
+                         <Button variant="link" onClick={() => setShowExample(!showExample)}>
+                            {showExample ? 'Hide Example' : 'Show Example Data'}
+                        </Button>
+                    )}
                 </div>
                 
                 {xpStatsToDisplay && xpStatsToDisplay.bonusVault > 0 && (
