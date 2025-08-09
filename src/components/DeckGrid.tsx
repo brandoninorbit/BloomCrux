@@ -3,24 +3,41 @@
 
 import Link from "next/link";
 import type { Deck as StitchDeck } from '@/stitch/types';
+import { Pencil, Trash2 } from "lucide-react";
+import { Button } from "./ui/button";
 
 export function DeckGrid({ decks }: { decks: StitchDeck[] }) {
+  const handleDelete = (deckId: string) => {
+    // Placeholder for delete functionality
+    alert(`Delete action for deck ${deckId}`);
+  };
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
       {decks.map((d) => (
-        <Link
+        <div
           key={d.id}
-          href={`/decks/${d.id}/study`}
           className="group perspective-1000 block"
-          prefetch={false}
         >
-          <div className="relative w-full aspect-[3/4] bg-white rounded-xl shadow-md transition-all duration-500 group-hover:shadow-xl group-hover:-translate-y-2 transform-style-3d group-hover:rotate-y-3">
-            <div className="absolute inset-0 bg-gray-100 rounded-xl flex items-center justify-center">
-              <p className="text-lg font-medium text-center px-2 text-[#637488]">{d.description || "Deck"}</p>
+          <div className="relative w-full aspect-[3/4] bg-white rounded-xl shadow-md transition-all duration-500 group-hover:shadow-xl group-hover:-translate-y-2 flex flex-col justify-between">
+            <Link href={`/decks/${d.id}/study`} className="flex-grow flex flex-col justify-between p-4" prefetch={false}>
+                <div className="flex-grow flex items-center justify-center">
+                    <p className="text-lg font-medium text-center text-[#637488]">{d.description || "Deck"}</p>
+                </div>
+                <div className="text-sm font-medium">{d.title}</div>
+            </Link>
+            <div className="flex items-center justify-end p-2 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity">
+               <Link href={`/decks/${d.id}/edit`} passHref>
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-blue-100 hover:text-blue-600">
+                    <Pencil className="h-4 w-4" />
+                </Button>
+               </Link>
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-red-100 hover:text-red-600" onClick={() => handleDelete(d.id)}>
+                    <Trash2 className="h-4 w-4" />
+                </Button>
             </div>
-            <div className="absolute bottom-4 left-4 text-sm font-medium">{d.title}</div>
           </div>
-        </Link>
+        </div>
       ))}
     </div>
   );
