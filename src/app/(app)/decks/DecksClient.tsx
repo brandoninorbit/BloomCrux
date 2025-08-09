@@ -122,12 +122,10 @@ export default function DecksClient() {
             <section>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-semibold">Recent Decks</h2>
-                {user && (
-                    <div className="flex gap-2">
-                      <Button variant="secondary" asChild><Link href="/decks/new">New Set</Link></Button>
-                      <Button asChild><Link href="/decks/folders/new">New Folder</Link></Button>
-                    </div>
-                )}
+                <div className="flex gap-2">
+                  <Button variant="secondary" asChild><Link href="/decks/new">New Set</Link></Button>
+                  <Button asChild><Link href="/decks/folders/new">New Folder</Link></Button>
+                </div>
               </div>
               {loading ? (
                 <SkeletonRow />

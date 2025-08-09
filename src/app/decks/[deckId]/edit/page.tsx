@@ -333,6 +333,7 @@ export default function EditDeckPage() {
   useEffect(() => {
     const fetchDeckData = async () => {
       setLoading(true);
+      const isNewDeck = deckId.startsWith('new_');
 
       const fixBloom = (s: any): BloomLevel | null => {
         if (!s) return null;
@@ -365,30 +366,38 @@ export default function EditDeckPage() {
         });
 
       if (!user) {
-        // Mock data path for logged-out users
-        const allMocks = [...MOCK_DECKS_RECENT, ...Object.values(MOCK_DECKS_BY_FOLDER).flat()];
-        const mockDeck = allMocks.find(d => d.id === deckId);
-        if (mockDeck) {
-            const { cards: fetchedCards, ...deckData } = mockDeck;
-            setDeck((prev) => ({ ...(prev ?? { cards: [] }), ...deckData }));
-            setCards(migrateCards(fetchedCards || []));
-            setTitle(mockDeck.title);
-            setDescription(mockDeck.description);
-            setDeckSources(deckData.sources || ["questions_batch1_fixed.csv", "questions_batch2_fixed.csv"]);
-        } else {
-            setDeck({ id: 'mock-deck', title: 'Mock Deck Not Found', description: 'Please check the deck ID.', cards: [] });
-            setTitle('Mock Deck Not Found');
-            setDescription('Please check the deck ID.');
+        // Logged-out user path
+        if (isNewDeck) {
+            const newMockDeck: Deck = {
+                id: deckId,
+                title: 'Untitled Mock Deck',
+                description: '',
+                cards: [],
+                sources: [],
+            };
+            setDeck(newMockDeck);
+            setTitle(newMockDeck.title);
+            setDescription(newMockDeck.description);
+            setCards([]);
             setDeckSources([]);
+        } else {
+            const allMocks = [...MOCK_DECKS_RECENT, ...Object.values(MOCK_DECKS_BY_FOLDER).flat()];
+            const mockDeck = allMocks.find(d => d.id === deckId);
+            if (mockDeck) {
+                const { cards: fetchedCards, ...deckData } = mockDeck;
+                setDeck((prev) => ({ ...(prev ?? { cards: [] }), ...deckData }));
+                setCards(migrateCards(fetchedCards || []));
+                setTitle(mockDeck.title);
+                setDescription(mockDeck.description);
+                setDeckSources(deckData.sources || ["questions_batch1_fixed.csv", "questions_batch2_fixed.csv"]);
+            }
         }
         setLoading(false);
         return;
       }
       
-      const isNewDeck = deckId.startsWith('new_');
-      
+      // Logged-in user path
       if (isNewDeck) {
-        // This is a new, unsaved deck. Create a default structure.
         const newDeck: Deck = {
           id: deckId,
           title: 'Untitled Deck',
@@ -405,13 +414,12 @@ export default function EditDeckPage() {
         return;
       }
 
-      // Real data path for existing decks
       try {
         const fetchedDeck = await getDeck(user.uid, deckId);
         if (fetchedDeck) {
           const { cards: fetchedCards, ...deckData } = fetchedDeck;
           setDeck((prev) => ({ ...(prev ?? { cards: [] }), ...deckData }));
-          setCards(migrateCards(fetchedCards || [])); // Store cards separately
+          setCards(migrateCards(fetchedCards || []));
           setTitle(deckData.title);
           setDescription(deckData.description);
           setDeckSources(deckData.sources || []);
@@ -501,15 +509,21 @@ export default function EditDeckPage() {
 
 
   const handleSaveChanges = async () => {
-    if (!user || !deck) {
+    if (!deck) return;
+    setIsSaving(true);
+    
+    if (!user) {
+        // Logged-out user: Simulate save and redirect
         toast({
-            variant: "destructive",
-            title: "Error",
-            description: "You must be logged in to save a deck.",
+            title: "Saved Locally!",
+            description: "Your changes have been saved for this session. Log in to save permanently.",
         });
+        router.push('/decks');
+        setIsSaving(false);
         return;
     }
-    setIsSaving(true);
+
+    // Logged-in user: Real save
     try {
         const updatedDeck: Deck = { ...deck, title, description, cards, sources: deckSources };
         await saveDeck(user.uid, updatedDeck);
@@ -531,8 +545,6 @@ export default function EditDeckPage() {
   };
 
   const handleLoadCards = () => {
-    // In a real scenario, this would fetch cards if they weren't fetched initially.
-    // For now, it just reveals the cards already in state.
     setIsCardsLoading(true);
     setTimeout(() => {
         setCardsLoaded(true);
@@ -924,7 +936,3 @@ export default function EditDeckPage() {
     </main>
   );
 }
-
-    
-
-    

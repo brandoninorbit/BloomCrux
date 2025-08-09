@@ -47,21 +47,35 @@ export default function NewFolderPage({
       setError("Folder name cannot be empty.");
       return;
     }
-    if (!user) {
-      toast({ variant: "destructive", title: "You must be logged in." });
-      return;
-    }
-
+    
     setIsSubmitting(true);
     setError(null);
 
     try {
-      const newFolder = await createFolder(user.uid, { name: name.trim(), color });
+      let newFolder: FolderSummary;
+      if (user) {
+        newFolder = await createFolder(user.uid, { name: name.trim(), color });
+      } else {
+        // Logged-out user: create a temporary mock folder
+        newFolder = {
+          id: `mock_${Date.now()}`,
+          name: name.trim(),
+          color: color,
+          setCount: 0,
+          updatedAt: new Date(),
+        };
+        // NOTE: In a real app, you'd use a more robust state management
+        // to pass this back to the previous page. For testing, we'll
+        // just show a success message and redirect. The item will not persist.
+      }
+      
       if (onCreate) {
         onCreate(newFolder);
       }
+      
       toast({ title: "Folder created!", description: `The "${name.trim()}" folder has been added.` });
       router.push("/decks");
+
     } catch (err) {
       setError("Failed to create folder. Please try again.");
       console.error(err);
