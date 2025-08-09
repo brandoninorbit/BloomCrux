@@ -1,3 +1,4 @@
+
 import { redirect } from 'next/navigation';
 
 // This page is deprecated and now just redirects to the main study options hub.
