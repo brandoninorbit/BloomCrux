@@ -3,163 +3,172 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { Deck as StitchDeck, Topic as StitchTopic } from '@/stitch/types';
+import { useUserAuth } from "@/context/AuthContext"; // your hook
+// Firestore imports must only run for authed users
+import { db } from "@/lib/firebase";
+import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { useUserAuth } from "@/app/Providers/AuthProvider";
-import { getTopics } from "@/lib/firestore";
-import Link from "next/link";
-import { DeckGrid } from "@/components/DeckGrid";
 
-type Folder = { id: string; name: string; decks: StitchDeck[] };
+import {
+  MOCK_DECKS_RECENT,
+  MOCK_DECKS_BY_FOLDER,
+  MOCK_FOLDERS,
+} from "@/mock/decks";
+
+type Deck = { id: string; name: string; folderId?: string | null; updatedAt?: any };
+type Folder = { id: string; name: string; count?: number };
 
 type Mode =
   | { kind: "recent" }
-  | { kind: "folder"; folderId: string; folderName: string };
+  | { kind: "folder"; folderId: string; folderName: string; count?: number };
+
+const FLAG =
+  typeof window !== "undefined" &&
+  (process.env.NEXT_PUBLIC_USE_MOCK === "1" ||
+    new URLSearchParams(window.location.search).has("demo"));
 
 export default function DecksPage() {
+  const { user, loading: authLoading } = useUserAuth();
   const router = useRouter();
   const search = useSearchParams();
   const qFolder = search.get("folder");
-  const { user, loading: authLoading } = useUserAuth();
 
   const [mode, setMode] = useState<Mode>(qFolder ? { kind: "folder", folderId: qFolder, folderName: "..." } : { kind: "recent" });
-  
-  const [allDecks, setAllDecks] = useState<StitchDeck[]>([]);
-  const [allFolders, setAllFolders] = useState<Folder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [recent, setRecent] = useState<Deck[] | null>(null);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [folderDecks, setFolderDecks] = useState<Deck[] | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Load all user data (topics/decks) once, when the user object is available.
+  // MASTER loader: choose data source once auth state is known
   useEffect(() => {
-    // Wait until the auth state is resolved.
     if (authLoading) return;
 
-    // If there's no user, don't try to fetch data. Stop loading and show the empty state.
+    // Signed out path
     if (!user) {
-      setLoading(false);
+      if (FLAG) {
+        // MOCK: never hit Firestore
+        setFolders(MOCK_FOLDERS);
+        setRecent(MOCK_DECKS_RECENT);
+      } else {
+        // Empty state by design
+        setFolders([]);
+        setRecent([]);
+      }
       return;
     }
 
-    const fetchData = async () => {
+    // Authed path -> Firestore
+    (async () => {
       setLoading(true);
-      try {
-        const topics = await getTopics(user.uid);
-        const decks = topics.flatMap(t => t.decks ?? []);
-        
-        const folders: Folder[] = topics.map(t => ({
-          id: t.id,
-          name: t.name,
-          decks: t.decks ?? []
-        }));
+      // Folders
+      const fSnap = await getDocs(query(collection(db, "folders"), where("ownerUid", "==", user.uid)));
+      setFolders(fSnap.docs.map(d => ({ id: d.id, ...(d.data() as Folder) })));
+      // Recent decks
+      const dSnap = await getDocs(
+        query(collection(db, "decks"), where("ownerUid", "==", user.uid), orderBy("updatedAt", "desc"), limit(8))
+      );
+      setRecent(dSnap.docs.map(d => ({ id: d.id, ...(d.data() as Deck) })));
+      setLoading(false);
+    })();
+  }, [user, authLoading]);
 
-        setAllDecks(decks);
-        setAllFolders(folders);
-      } catch (error) {
-          console.error("Failed to fetch decks data:", error);
-          setAllDecks([]);
-          setAllFolders([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [user, authLoading]); // Rerun only when user or auth loading state changes.
-
-  // keep URL synced with view (optional but nice)
+  // When switching to a folder
   useEffect(() => {
-    if (mode.kind === "folder") {
-      router.replace(`/decks?folder=${mode.folderId}`);
-    } else {
-      router.replace(`/decks`);
+    if (mode.kind !== "folder") return;
+
+    if (!user) {
+      // MOCK / signed-out path
+      const name = MOCK_FOLDERS.find(f => f.id === mode.folderId)?.name ?? "Folder";
+      const count = MOCK_FOLDERS.find(f => f.id === mode.folderId)?.count;
+      setMode({ kind: "folder", folderId: mode.folderId, folderName: name, count });
+      setFolderDecks(MOCK_DECKS_BY_FOLDER[mode.folderId] ?? []);
+      return;
     }
+
+    // Authed path → Firestore
+    (async () => {
+      setLoading(true);
+      const f = await getDoc(doc(db, "folders", mode.folderId));
+      const name = f.exists() ? (f.data()?.name as string) : "Folder";
+      const count = f.exists() ? (f.data()?.count as number | undefined) : undefined;
+
+      const ds = await getDocs(
+        query(collection(db, "decks"), where("ownerUid", "==", user.uid), where("folderId", "==", mode.folderId))
+      );
+      setFolderDecks(ds.docs.map(d => ({ id: d.id, ...(d.data() as Deck) })));
+      setMode({ kind: "folder", folderId: mode.folderId, folderName: name, count });
+      setLoading(false);
+    })();
+  }, [mode, user]);
+
+  // Sync URL (nice to have)
+  useEffect(() => {
+    if (mode.kind === "folder") router.replace(`/decks?folder=${mode.folderId}`);
+    else router.replace(`/decks`);
   }, [mode, router]);
 
-
-  const recentDecks = useMemo(() => {
-    // A simple sort by ID for now, a real app would use a timestamp
-    return [...allDecks].sort((a, b) => (b.id || '').localeCompare(a.id || '')).slice(0, 8);
-  }, [allDecks]);
-
-  const currentFolderDecks = useMemo(() => {
-    if (mode.kind !== 'folder') return [];
-    const folder = allFolders.find(f => f.id === mode.folderId);
-    return folder?.decks ?? [];
-  }, [mode, allFolders]);
-  
   const heading = useMemo(() => {
     if (mode.kind === "recent") return "Recent Decks";
-    const folder = allFolders.find(f => f.id === (mode as any).folderId);
-    return `Folder: ${folder?.name || '...'}`;
-  }, [mode, allFolders]);
+    const suffix = mode.count != null ? ` (${mode.count} sets)` : "";
+    return `Folder: ${mode.folderName}${suffix}`;
+  }, [mode]);
+
+  const decksToShow = mode.kind === "recent" ? recent : folderDecks;
 
   function openFolder(f: Folder) {
-    setMode({ kind: "folder", folderId: f.id, folderName: f.name });
+    setFolderDecks(null);
+    setMode({ kind: "folder", folderId: f.id, folderName: f.name, count: f.count });
   }
-
   function backToRecent() {
     setMode({ kind: "recent" });
   }
 
-  const decksToShow = mode.kind === "recent" ? recentDecks : currentFolderDecks;
-
   return (
-    <main className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
-      {/* Header row swaps actions */}
+    <main className="space-y-8">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold">{heading}</h2>
-
         {mode.kind === "recent" ? (
           <div className="flex gap-2">
             <Button variant="secondary">New Set</Button>
             <Button>New Folder</Button>
           </div>
         ) : (
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={backToRecent}>
-              Back to Recent Decks
-            </Button>
-          </div>
+          <Button variant="secondary" onClick={backToRecent}>Back to Recent Decks</Button>
         )}
       </div>
 
-      {/* Top grid swaps between recent and folder decks */}
+      {/* Top grid (recent or folder decks) */}
       <section>
-        {loading ? (
+        {loading && (!decksToShow || decksToShow.length === 0) ? (
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Loading…
           </div>
         ) : decksToShow && decksToShow.length > 0 ? (
-          <DeckGrid decks={decksToShow} />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {decksToShow.map(d => (
+              <a key={d.id} href={`/decks/${d.id}`} className="rounded-xl border p-6 hover:shadow-sm">
+                {d.name}
+              </a>
+            ))}
+          </div>
         ) : (
           <p className="text-sm text-muted-foreground">No decks yet.</p>
         )}
       </section>
 
-      {/* Folders section stays visible for quick switching */}
+      {/* Folders list (always visible) */}
       <section className="space-y-3">
         <h3 className="text-xl font-semibold">Folders</h3>
-        {loading ? (
-            <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-            </div>
-        ) : allFolders.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {allFolders.map(f => (
-                <button
-                key={f.id}
-                onClick={() => openFolder(f)}
-                className="rounded-2xl border p-4 text-left hover:shadow-sm"
-                aria-label={`Open folder ${f.name}`}
-                >
-                <div className="font-medium">{f.name}</div>
-                <div className="text-xs text-muted-foreground">{f.decks.length ?? "—"} sets</div>
-                </button>
-            ))}
-            </div>
-        ) : (
-            <p className="text-sm text-muted-foreground">No folders created yet.</p>
-        )}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {folders.map(f => (
+            <button key={f.id} onClick={() => openFolder(f)} className="rounded-2xl border p-4 text-left hover:shadow-sm">
+              <div className="font-medium">{f.name}</div>
+              <div className="text-xs text-muted-foreground">{f.count ?? "—"} sets</div>
+            </button>
+          ))}
+          {folders.length === 0 && <p className="text-sm text-muted-foreground">No folders created yet.</p>}
+        </div>
       </section>
     </main>
   );
