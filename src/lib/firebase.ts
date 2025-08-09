@@ -1,19 +1,18 @@
+﻿// src/lib/firebase.ts
+import {
+  getDb as _getDb,
+  getFirebaseAuth as _getFirebaseAuth,
+  getFirebaseStorage as _getFirebaseStorage,
+} from "../stitch/lib/firebase"; // keep this relative path
 
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+// Create singletons and export them
+export const db = _getDb();
+export const auth = _getFirebaseAuth();
+export const storage = _getFirebaseStorage();
 
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+// (Optional) re-export the getters if other code still uses them
+export {
+  _getDb as getDb,
+  _getFirebaseAuth as getFirebaseAuth,
+  _getFirebaseStorage as getFirebaseStorage,
 };
-
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-export { app, auth, db };

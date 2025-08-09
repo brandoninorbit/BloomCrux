@@ -1,8 +1,12 @@
+"use client";
 
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import { LoginForm } from "@/components/auth/login-form";
 import Image from "next/image";
 
 export default function LoginPage() {
+  useAuthRedirect(); // ✅ no args - default behavior redirects authed users to /home
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-background text-foreground">
       <div className="text-center mb-8">

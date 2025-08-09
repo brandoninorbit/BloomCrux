@@ -112,3 +112,5 @@ export function Flashcard({ front, back, onCardAnswered }: FlashcardProps) {
     </div>
   );
 }
+
+

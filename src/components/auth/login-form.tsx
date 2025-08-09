@@ -1,4 +1,5 @@
-'use client';
+﻿// at the very top of src/components/auth/login-form.tsx
+"use client";
 
 import { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -39,7 +40,7 @@ export function LoginForm() {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push('/app/decks');
+      router.push("/home");
     } catch (err: any) {
       toast({
         title: "Login Failed",
@@ -52,7 +53,7 @@ export function LoginForm() {
   const handleGoogleLogin = async () => {
     try {
         await signInWithGoogle();
-        router.push("/app/decks");
+        router.push("/home");
     } catch (error: any) {
         toast({
             title: "Sign in Failed",
@@ -65,7 +66,7 @@ export function LoginForm() {
   const handleAppleLogin = async () => {
     try {
         await signInWithApple();
-        router.push("/app/decks");
+        router.push("/home");
     } catch (error: any) {
         toast({
             title: "Sign in Failed",
@@ -122,3 +123,5 @@ export function LoginForm() {
     </Card>
   );
 }
+
+

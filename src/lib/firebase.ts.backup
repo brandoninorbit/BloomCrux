@@ -1,0 +1,38 @@
+// src/lib/firebase.ts
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth, browserLocalPersistence, inMemoryPersistence } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+
+const cfg = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
+};
+
+function app() {
+  return getApps().length ? getApp() : initializeApp(cfg);
+}
+
+// what your code is importing:
+export function getFirebaseAuth() {
+  const a = getAuth(app());
+  if (typeof window === "undefined") a.setPersistence(inMemoryPersistence).catch(() => {});
+  else a.setPersistence(browserLocalPersistence).catch(() => {});
+  return a;
+}
+export const auth = getFirebaseAuth();
+
+export function getDb() {
+  return getFirestore(app());
+}
+
+// legacy helpers some files import (safe stubs)
+export async function getUserProgress(_userId: string) {
+  return { total: 0, reviewed: 0, percent: 0 };
+}
+export async function getUserDeckProgress(_userId: string, deckId: string) {
+  return { deckId, progress: 0, correct: 0, total: 0 };
+}

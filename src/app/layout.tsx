@@ -4,7 +4,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import { Lexend } from 'next/font/google'
-import { AuthProvider } from './providers/AuthProvider';
+import AuthProvider from "./providers/AuthProvider";
 
 const lexend = Lexend({
   subsets: ['latin'],
@@ -33,3 +33,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+

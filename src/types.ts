@@ -1,0 +1,188 @@
+// src/types.ts
+
+export type DeckId = string;
+export type TopicId = string;
+export type UserId = string;
+
+export type Card = { id: string };
+
+export type Deck = {
+  id: DeckId;
+  name: string;
+  topicId?: TopicId;
+  cardCount?: number;
+  cards?: Card[];           // optional, used by UI
+};
+
+export type Topic = {
+  id: TopicId;
+  name: string;
+  deckIds?: DeckId[];       // when decks fetched separately
+  decks?: Deck[];           // optional, some pages expect this
+};
+
+export type GlobalProgress = {
+  total: number;
+  reviewed: number;
+  percent: number;   // 0100
+  level?: number;    // used by AgentCard
+  streak?: number;
+  xp?: number;       // added for DashboardClient mock/data
+  xpToNext?: number; // added for DashboardClient mock/data
+};
+
+export type DeckProgress = {
+  deckId?: DeckId;
+  progress?: number;
+  correct?: number;
+  total?: number;
+  deckName?: string;
+  totalCards?: number;
+  lastStudied?: string | number | Date | null;
+  isMastered?: boolean;
+  level?: number;
+  xp?: number;
+  xpToNext?: number;
+  bloomMastery?: Record<string, { correct: number; total: number }>;
+};
+export type UserXpStats = {
+  sessionXP: number;
+  dailyXP: number;
+  bonusVault: number;
+  commanderXP: number;
+  sessionStart: Date;
+  lastDailyReset: Date;
+  isXpBoosted: boolean;
+};
+export type Inventory = Record<string, number>;
+
+export type SelectedCustomizations = {
+  activeAvatarFrame: string;  // e.g., "default", "gold"
+  theme: string | null;
+  frameId?: string | null;    // legacy field some code still references
+};
+
+// ==== CER types (used by src/components/CERCard.tsx) ====
+export type CERPartInput = "mcq" | "text";
+
+export type CERPart = {
+  id?: string;
+  kind?: "claim" | "evidence" | "reasoning" | string;
+  inputType: CERPartInput;        // component checks this
+  prompt?: string;
+  choices?: string[];
+  options?: string[];
+  correctIndex?: number;
+  value?: string;
+  [key: string]: any;
+};
+
+export type CERCard = {
+  id: string;
+  prompt?: string;
+  parts: CERPart[];               // required so .some/.map are safe
+  explanation?: string;
+  [key: string]: any;
+};
+
+export type StudyMode = "practice" | "quest" | "timed" | "remix";
+
+// ===== Dashboard types expected by DashboardClient.tsx =====
+
+// Blooms taxonomy levels (keep flexible with string fallback if needed)
+export type BloomLevel =
+  | "remember"
+  | "understand"
+  | "apply"
+  | "analyze"
+  | "evaluate"
+  | "create"
+  | (string & {}); // allow unknown custom levels without breaking TS
+
+// Per-deck progress for a user
+export type UserDeckProgress = {
+  deckId: DeckId;
+  progress: number;     // 0100 or 01 depending on your UI (UI just reads a number)
+  correct?: number;
+  total?: number;
+  lastReviewedAt?: string | number | Date | null;
+};
+
+// Simple power-up inventory by id -> count
+export type UserPowerUps = Record<string, number>;
+
+// User settings used around the dashboard and agent card
+export type UserSettings = {
+  theme?: string | null;
+  dailyGoal?: number | null;
+  notificationsEnabled?: boolean | null;
+  selectedCustomizations?: SelectedCustomizations | null;
+  displayName?: string | null;
+  email?: string | null;
+  tokens?: number | null;
+  unlockedLevels?: Record<string, any> | null;
+  [key: string]: any;
+};
+// ===== Flashcard model (used by app/import) =====
+export type Flashcard = {
+  id: string;
+  question?: string;     // some code might use question/answer
+  answer?: string;
+  front?: string;        // others might use front/back
+  back?: string;
+  choices?: string[];
+  correctIndex?: number;
+  explanation?: string;
+  tags?: string[];
+  [key: string]: any;    // allow extra fields without breaking TS
+};
+export {};
+export type DeckProgressSummary = {
+  level: number;
+  xp: number;
+  xpToNext: number;
+};
+export interface DragAndDropSortingCard {
+  id: string;
+  // Optional text fields  use whichever your component provides
+  question?: string;
+  prompt?: string;
+  description?: string;
+
+  // Grouped sorting structure
+  groups: Array<{
+    id: string;
+    title?: string;
+    // Reuse your existing DndItem if present; otherwise allow any shape
+    items: DndItem[] | any[];
+  }>;
+
+  // Allow extra fields without type fights
+  [key: string]: any;
+}
+
+export interface DndItem {
+  id: string;
+  label?: string;
+  content?: string;
+  [key: string]: any; // allow extra fields
+}
+
+// ---- AUTO-GENERATED STUBS (compile-first) ----
+export type bloomOrder = any;
+export type CodeCard = any;
+export type CompareContrastCard = any;
+export type FillInTheBlankCard = any;
+export type PowerUpType = any;
+export type PurchaseCounts = any;
+export type SequencingCard = any;
+export type ShopItem = any;
+export type ShortAnswerCard = any;
+export type StandardMCQCard = any;
+export type TextCard = any;
+export type TwoTierMCQCard = any;
+export type UserCustomizations = any;
+export type UserInventory = any;
+
+
+

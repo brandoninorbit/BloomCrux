@@ -1,21 +1,20 @@
 
+"use client";
 
 import { SignupForm } from "@/components/auth/signup-form";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import Image from "next/image";
 
 export default function SignupPage() {
+  useAuthRedirect();
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-background text-foreground">
-      <div className="text-center mb-8">
-         <h1 className="text-5xl font-bold tracking-wider text-primary font-headline flex items-center gap-4">
-            <Image src="https://firebasestorage.googleapis.com/v0/b/bloomcrux.firebasestorage.app/o/BloomCrux%20logo.png?alt=media&token=d86c90af-2186-4d28-95ed-be594b54ed30" alt="BloomCrux Logo" width={96} height={96} />
-            BloomCrux
-        </h1>
-        <p className="text-lg text-muted-foreground mt-2">
-          Create an account to start learning.
-        </p>
+    <main className="min-h-dvh grid place-items-center p-6">
+      <div className="w-full max-w-sm">
+        <h1 className="text-2xl font-semibold mb-4">Create an account</h1>
+        <SignupForm />
       </div>
-      <SignupForm />
     </main>
   );
 }
+
+

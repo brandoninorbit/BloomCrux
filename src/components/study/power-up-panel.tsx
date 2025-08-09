@@ -38,7 +38,7 @@ export function PowerUpPanel({ tokens }: { tokens: number }) {
                       </div>
                     </div>
                     <Button size="sm" disabled={tokens < powerUp.cost} className="shrink-0">
-                      <span className="mr-2">🏵️ {powerUp.cost}</span>
+                      <span className="mr-2">Ã°Å¸ÂÂµÃ¯Â¸Â {powerUp.cost}</span>
                       Activate
                     </Button>
                   </div>
@@ -51,3 +51,5 @@ export function PowerUpPanel({ tokens }: { tokens: number }) {
     </div>
   )
 }
+
+

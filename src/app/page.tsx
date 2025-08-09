@@ -45,7 +45,7 @@ export default function AboutPage() {
             </Link>
             <nav className="hidden items-center gap-8 md:flex">
                 <Link className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors" href="/">Home</Link>
-                <Link className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors" href="/app/decks">Decks</Link>
+                <Link className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors" href="/decks">Decks</Link>
                 <Link className="text-sm font-bold text-primary" href="/">About</Link>
             </nav>
             <div className="flex items-center gap-4">
@@ -86,7 +86,7 @@ export default function AboutPage() {
                         <div className="md:w-1/2 md:pl-8 text-center md:text-left">
                             <h3 className="text-2xl font-semibold mb-3 text-foreground">AI-Powered Content</h3>
                             <p className="text-muted-foreground">
-                                Leverage generative AI to create diverse, high-quality flashcards—from multiple choice to complex reasoning—in seconds.
+                                Leverage generative AI to create diverse, high-quality flashcardsÃ¢â‚¬â€from multiple choice to complex reasoningÃ¢â‚¬â€in seconds.
                             </p>
                         </div>
                     </div>
@@ -164,3 +164,6 @@ export default function AboutPage() {
     </div>
   );
 }
+
+
+
