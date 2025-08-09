@@ -19,7 +19,7 @@ import {
 } from "../stitch/lib/firestore";
 
 import type { GlobalProgress as AppGlobalProgress, SelectedCustomizations } from "@/types";
-import type { Topic as StitchTopic } from "@/stitch/types";
+import type { Topic as StitchTopic, UserDeckProgress } from "@/stitch/types";
 import { onSnapshot, query, collection, where } from "firebase/firestore";
 import { db } from "@/lib/firebase"; // make sure this path is correct
 
@@ -79,3 +79,5 @@ export {
   logCardAttempt,
   purchasePowerUp
 };
+
+export type { UserDeckProgress };

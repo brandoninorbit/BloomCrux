@@ -1,9 +1,6 @@
 // Temporary shim to unify types during migration
 export * from '@/types';
 
-// Compat aliases during migration:
-export type UserDeckProgress = import('@/types').DeckProgress;
-
 // Minimal CardAttempt to satisfy all callers (adjust fields if you need more)
 import type { BloomLevel } from '@/types';
 export type CardAttempt = {
