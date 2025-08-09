@@ -18,6 +18,17 @@ import { MOCK_DECKS_BY_FOLDER, MOCK_DECKS_RECENT } from '@/mock/decks';
 import { cn } from '@/lib/utils';
 import CsvImportGuide from '@/components/CsvImportGuide';
 import Papa from 'papaparse';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 // Function to transform a parsed CSV row into a Flashcard object
 const transformRowToCard = (row: any): Flashcard | null => {
@@ -82,6 +93,8 @@ export default function EditDeckPage() {
   // State for imported cards
   const [newlyImportedCards, setNewlyImportedCards] = useState<Flashcard[]>([]);
 
+  // State for deleting sources
+  const [sourceToDelete, setSourceToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDeckData = async () => {
@@ -232,8 +245,24 @@ export default function EditDeckPage() {
     );
   };
   
+  const handleDeleteSource = (sourceName: string) => {
+    if (!deck) return;
+    // Note: This logic is a placeholder. A real implementation would need
+    // to know which cards came from which source. For now, it just removes
+    // the source from the UI list.
+    const updatedSources = deck.sources?.filter(s => s !== sourceName) || [];
+    setDeck(prevDeck => prevDeck ? { ...prevDeck, sources: updatedSources } : null);
+    // You would also filter the `cards` state here if you had the source info on each card.
+    // setCards(prev => prev.filter(c => c.source !== sourceName));
+    toast({
+        title: "Source Removed",
+        description: `All cards from ${sourceName} have been removed from this deck. Save your changes to make it permanent.`
+    });
+    setSourceToDelete(null); // Close dialog
+  }
+  
   const starredCount = cards.filter(c => c.isStarred).length || 0;
-  const mockSources = ["questions_batch1_fixed.csv", "questions_batch2_fixed.csv", "questions_batch3_fixed.csv"];
+  const mockSources = deck?.sources || ["questions_batch1_fixed.csv", "questions_batch2_fixed.csv", "questions_batch3_fixed.csv"];
 
   if (loading) {
     return (
@@ -253,6 +282,26 @@ export default function EditDeckPage() {
 
   return (
     <main className="container mx-auto max-w-4xl p-4 py-8">
+      <AlertDialog open={!!sourceToDelete} onOpenChange={(isOpen) => !isOpen && setSourceToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Delete all cards from this source?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This will permanently delete all cards imported from <span className="font-semibold text-foreground">{sourceToDelete}</span>. This action cannot be undone.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setSourceToDelete(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={() => sourceToDelete && handleDeleteSource(sourceToDelete)}
+                >
+                    Delete Imported Cards
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Edit Deck</h1>
         <div className="flex gap-2">
@@ -354,7 +403,7 @@ export default function EditDeckPage() {
                             <FileText className="h-5 w-5" />
                             <span className="font-medium">{source}</span>
                         </div>
-                        <Button variant="ghost" size="icon" className="hover:bg-destructive/10 hover:text-destructive">
+                         <Button variant="ghost" size="icon" className="hover:bg-destructive/10 hover:text-destructive" onClick={() => setSourceToDelete(source)}>
                             <Trash2 className="h-4 w-4" />
                         </Button>
                     </div>
