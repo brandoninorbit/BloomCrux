@@ -1,3 +1,4 @@
+
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -21,6 +22,22 @@ const missionTabs = [
     { key: 'topic-trek', label: 'Topic Trek', icon: Rocket },
 ];
 
+const MOCK_DECK: Deck = {
+    id: 'mock-deck',
+    title: 'Example Deck (Logged Out)',
+    description: 'This is a sample deck for viewing the UI.',
+    cards: [],
+};
+
+const MOCK_PROGRESS: UserDeckProgress = {
+    level: 3,
+    xp: 50,
+    xpToNext: 150,
+    streak: 0,
+    lastCardIndex: 0,
+    mode: 'quest'
+};
+
 
 export default function StudyHubPage() {
     const { deckId } = useParams() as { deckId: string };
@@ -32,7 +49,9 @@ export default function StudyHubPage() {
 
     useEffect(() => {
         if (!user) {
-            // Handle logged out state - maybe redirect or show a message
+            // Handle logged out state
+            setDeck(MOCK_DECK);
+            setProgress(MOCK_PROGRESS);
             setLoading(false);
             return;
         }
