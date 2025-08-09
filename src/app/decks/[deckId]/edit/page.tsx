@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -9,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
-import type { Deck, Flashcard, CardFormat, CERPart, DndItem, BloomLevel, CERCard } from '@/stitch/types';
+import type { Deck, Flashcard, CardFormat, CERPart, DndItem, BloomLevel, CERCard, CompareContrastCard, StandardMCQCard, FillInTheBlankCard, ShortAnswerCard, SequencingCard, DragAndDropSortingCard } from '@/stitch/types';
 import { getDeck, saveDeck } from '@/lib/firestore';
 import { Loader2, PlusCircle, Star, Upload, Info, Trash2, FileText, Eye, Edit } from 'lucide-react';
 import Link from 'next/link';
@@ -31,7 +32,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CreateCardDialog from '@/components/CreateCardDialog';
-import CERCardPreview from '@/components/CERCard';
+import { StudyCard } from '@/components/StudyCard';
 
 // CSV PARSING HELPERS
 const stripBOM = (s: string) => s.replace(/^\uFEFF/, '');
@@ -677,7 +678,7 @@ export default function EditDeckPage() {
   
   const handlePreviewCard = (card: Flashcard) => {
       // For now, we only support CER previews.
-      if (card.cardFormat === 'CER') {
+      if (card.cardFormat === 'CER' || card.cardFormat === 'Compare/Contrast') {
           setPreviewingCard(card);
       } else {
           toast({ title: 'Preview Not Available', description: `Interactive preview for ${card.cardFormat} cards is coming soon.` });
@@ -809,8 +810,15 @@ export default function EditDeckPage() {
                    </AlertDialogDescription>
               </AlertDialogHeader>
               <div className="py-4">
-                  {previewingCard?.cardFormat === 'CER' && (
-                      <CERCardPreview card={previewingCard as CERCard} onLog={() => {}} />
+                  {previewingCard && (
+                       <StudyCard
+                          card={previewingCard}
+                          deckId={deck.id}
+                          onLogAttempt={() => {}}
+                          onNextCard={() => setPreviewingCard(null)}
+                          isRetryArmed={false}
+                          onUseRetry={() => {}}
+                        />
                   )}
               </div>
                <AlertDialogFooter>
