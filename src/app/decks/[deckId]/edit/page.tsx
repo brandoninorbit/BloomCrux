@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
 import type { Deck, Flashcard, CardFormat, CERPart, DndItem, BloomLevel } from '@/stitch/types';
 import { getDeck, saveDeck } from '@/lib/firestore';
-import { Loader2, PlusCircle, Star, Upload, Info, Trash2, FileText, Eye } from 'lucide-react';
+import { Loader2, PlusCircle, Star, Upload, Info, Trash2, FileText, Eye, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { MOCK_DECKS_BY_FOLDER, MOCK_DECKS_RECENT } from '@/mock/decks';
@@ -337,20 +337,33 @@ export default function EditDeckPage() {
     setSourceToDelete(null); // Close dialog
   }
 
-  const sortedCards = useMemo(() => {
-    const bloomOrder: BloomLevel[] = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'];
-    
-    switch (sortOrder) {
-        case 'Bloom\'s Level':
-            return [...cards].sort((a, b) => bloomOrder.indexOf(a.bloomLevel) - bloomOrder.indexOf(b.bloomLevel));
-        case 'Card Format':
-            return [...cards].sort((a, b) => a.cardFormat.localeCompare(b.cardFormat));
-        case 'Source':
-            // Placeholder for when source is tracked per card
-            return cards;
-        default:
-            return cards;
+  const groupedCards = useMemo(() => {
+    if (sortOrder === 'Default') {
+      return { 'default': cards };
     }
+
+    const bloomOrder: BloomLevel[] = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'];
+
+    const grouped = cards.reduce((acc, card) => {
+      const key = sortOrder === 'Bloom\'s Level' ? card.bloomLevel : card.cardFormat;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(card);
+      return acc;
+    }, {} as Record<string, Flashcard[]>);
+    
+    if (sortOrder === 'Bloom\'s Level') {
+        const orderedGroup: Record<string, Flashcard[]> = {};
+        bloomOrder.forEach(level => {
+            if (grouped[level]) {
+                orderedGroup[level] = grouped[level];
+            }
+        });
+        return orderedGroup;
+    }
+
+    return grouped;
   }, [cards, sortOrder]);
   
   const starredCount = cards.filter(c => c.isStarred).length || 0;
@@ -371,6 +384,35 @@ export default function EditDeckPage() {
         </div>
     )
   }
+  
+  const renderCard = (card: Flashcard) => {
+    let prefix = '';
+    if (sortOrder === 'Bloom\'s Level') {
+        prefix = `[${card.bloomLevel}] `;
+    } else if (sortOrder === 'Card Format') {
+        prefix = `[${card.cardFormat}] `;
+    }
+    
+    return (
+        <Card key={card.id}>
+            <CardContent className="p-4 flex justify-between items-center">
+                <div>
+                    <p className="font-semibold">{prefix}{card.questionStem}</p>
+                    <p className="text-sm text-muted-foreground">{card.cardFormat}</p>
+                </div>
+                <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => handleToggleStar(card.id)}>
+                        <Star className={cn("h-4 w-4", card.isStarred && "fill-yellow-400 text-yellow-500")} />
+                    </Button>
+                    <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                </div>
+            </CardContent>
+        </Card>
+    )
+  }
+
 
   return (
     <main className="container mx-auto max-w-4xl p-4 py-8">
@@ -533,23 +575,20 @@ export default function EditDeckPage() {
                 </CardContent>
             </Card>
         ) : (
-            sortedCards.map(card => (
-                 <Card key={card.id}>
-                    <CardContent className="p-4 flex justify-between items-center">
-                        <div>
-                            <p className="font-semibold">{card.questionStem}</p>
-                            <p className="text-sm text-muted-foreground">{card.cardFormat}</p>
+             <div className="space-y-6">
+                {Object.entries(groupedCards).map(([groupName, groupCards]) => (
+                    <div key={groupName}>
+                        {sortOrder !== 'Default' && (
+                            <h3 className="text-md font-semibold text-muted-foreground mb-3">
+                                {groupName} ({groupCards.length})
+                            </h3>
+                        )}
+                        <div className="space-y-2">
+                           {groupCards.map(card => renderCard(card))}
                         </div>
-                        <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => handleToggleStar(card.id)}>
-                                <Star className={cn("h-4 w-4", card.isStarred && "fill-yellow-400 text-yellow-500")} />
-                            </Button>
-                            <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" className="hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            ))
+                    </div>
+                ))}
+            </div>
         )}
 
       </div>
