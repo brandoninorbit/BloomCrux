@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import autoAnimate from "@formkit/auto-animate";
 import { useUserAuth } from "@/context/AuthContext";
 import { getUserDecks, getUserFolders } from "@/adapters/decks";
 import type { DeckSummary, FolderSummary } from "@/types";
@@ -55,8 +56,8 @@ function FolderCard({ folder, onEdit }: { folder: FolderSummary, onEdit: () => v
   return (
     <div
       className="group w-full text-left bg-white rounded-2xl shadow-md p-5 flex items-center gap-5
-                 hover:shadow-lg hover:-translate-y-1 transition-transform duration-300 focus:outline-none
-                 focus-visible:ring-2 focus-visible:ring-primary/40"
+                 transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-md
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
     >
       <div
         className={`w-12 h-12 rounded-lg flex items-center justify-center 
@@ -80,10 +81,18 @@ function FolderCard({ folder, onEdit }: { folder: FolderSummary, onEdit: () => v
 
 
 function SkeletonRow() { 
+  const SkeletonCard = () => (
+    <div className="h-28 rounded-2xl bg-slate-100 overflow-hidden relative">
+      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+    </div>
+  );
     return (
-        <div className="space-y-4">
-            <div className="h-24 rounded-lg bg-muted/40 animate-pulse" />
-            <div className="h-24 rounded-lg bg-muted/40 animate-pulse" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
         </div>
     ); 
 }
@@ -96,6 +105,14 @@ export default function DecksClient() {
   const [editingFolder, setEditingFolder] = useState<FolderSummary | null>(null);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const router = useRouter();
+  const folderGridRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (folderGridRef.current) {
+      autoAnimate(folderGridRef.current);
+    }
+  }, [folderGridRef]);
+
 
   useEffect(() => {
     if (!user) {
@@ -170,7 +187,7 @@ export default function DecksClient() {
               {loading ? (
                 <SkeletonRow />
               ) : folders && folders.length > 0 ? (
-                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                 <div ref={folderGridRef} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                     {folders.map((f) => (
                       <FolderCard
                         key={f.id}
