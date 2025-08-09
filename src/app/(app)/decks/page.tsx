@@ -3,108 +3,91 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase"; // client SDK init
+import type { Deck as StitchDeck, Topic as StitchTopic } from '@/stitch/types';
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useUserAuth } from "@/app/Providers/AuthProvider";
+import { getTopics } from "@/lib/firestore";
+import Link from "next/link";
 
-type Deck = {
-  id: string;
-  name: string;
-  folderId?: string | null;
-  ownerUid: string;
-  updatedAt?: any;
-};
-
-type Folder = { id: string; name: string; ownerUid: string; count?: number };
+type Folder = { id: string; name: string; decks: StitchDeck[] };
 
 type Mode =
   | { kind: "recent" }
-  | { kind: "folder"; folderId: string; folderName: string; count?: number };
+  | { kind: "folder"; folderId: string; folderName: string };
 
 export default function DecksPage() {
   const router = useRouter();
   const search = useSearchParams();
-  const qFolder = search.get("folder"); // keep URL in sync, optional
+  const qFolder = search.get("folder");
   const { user } = useUserAuth();
-  const uid = user?.uid ?? "demo-user"; // replace with user?.uid
+  const uid = user?.uid;
 
   const [mode, setMode] = useState<Mode>(qFolder ? { kind: "folder", folderId: qFolder, folderName: "..." } : { kind: "recent" });
-  const [recent, setRecent] = useState<Deck[] | null>(null);
-  const [folderDecks, setFolderDecks] = useState<Deck[] | null>(null);
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [loading, setLoading] = useState(false);
+  
+  const [allDecks, setAllDecks] = useState<StitchDeck[]>([]);
+  const [allFolders, setAllFolders] = useState<Folder[]>([]);
 
-  // Load folders list (for the “Folders” section)
+  const [loading, setLoading] = useState(true);
+
+  // Load all user data (topics/decks) once
   useEffect(() => {
+    if (!uid) {
+        setLoading(false);
+        return;
+    };
     (async () => {
-      const snap = await getDocs(query(collection(db, "folders"), where("ownerUid", "==", uid)));
-      setFolders(snap.docs.map(d => ({ id: d.id, ...(d.data() as Folder) })));
+      setLoading(true);
+      const topics = await getTopics(uid);
+      const decks = topics.flatMap(t => t.decks ?? []);
+      
+      const folders: Folder[] = topics.map(t => ({
+        id: t.id,
+        name: t.name,
+        decks: t.decks ?? []
+      }));
+
+      setAllDecks(decks);
+      setAllFolders(folders);
+      setLoading(false);
     })();
   }, [uid]);
 
-  // Load recent decks on first paint or when returning to Recent
-  useEffect(() => {
-    if (mode.kind !== "recent" || recent) return;
-    (async () => {
-      setLoading(true);
-      const snap = await getDocs(
-        query(
-          collection(db, "decks"),
-          where("ownerUid", "==", uid),
-          orderBy("updatedAt", "desc"),
-          limit(8)
-        )
-      );
-      setRecent(snap.docs.map(d => ({ id: d.id, ...(d.data() as Deck) })));
-      setLoading(false);
-    })();
-  }, [mode, recent, uid]);
-
-  // Load folder decks when a folder mode is set
-  useEffect(() => {
-    if (mode.kind !== "folder") return;
-    (async () => {
-      setLoading(true);
-
-      // fetch folder name (so the heading says “Folder: Name”)
-      const f = await getDoc(doc(db, "folders", mode.folderId));
-      const folderName = f.exists() ? (f.data()?.name as string) : "Folder";
-      const count = f.exists() ? (f.data()?.count as number | undefined) : undefined;
-
-      const ds = await getDocs(
-        query(collection(db, "decks"), where("ownerUid", "==", uid), where("folderId", "==", mode.folderId))
-      );
-      setFolderDecks(ds.docs.map(d => ({ id: d.id, ...(d.data() as Deck) })));
-      setMode({ kind: "folder", folderId: mode.folderId, folderName, count });
-      setLoading(false);
-    })();
-  }, [mode.kind, uid]);
-
   // keep URL synced with view (optional but nice)
   useEffect(() => {
-    if (mode.kind === "folder") router.replace(`/decks?folder=${mode.folderId}`);
-    else router.replace(`/decks`);
+    if (mode.kind === "folder") {
+      router.replace(`/decks?folder=${mode.folderId}`);
+    } else {
+      router.replace(`/decks`);
+    }
   }, [mode, router]);
 
+
+  const recentDecks = useMemo(() => {
+    // A simple sort by ID for now, a real app would use a timestamp
+    return [...allDecks].sort((a, b) => b.id.localeCompare(a.id)).slice(0, 8);
+  }, [allDecks]);
+
+  const currentFolderDecks = useMemo(() => {
+    if (mode.kind !== 'folder') return [];
+    const folder = allFolders.find(f => f.id === mode.folderId);
+    return folder?.decks ?? [];
+  }, [mode, allFolders]);
+  
   const heading = useMemo(() => {
     if (mode.kind === "recent") return "Recent Decks";
-    const suffix = mode.count != null ? ` (${mode.count} sets)` : "";
-    return `Folder: ${mode.folderName}${suffix}`;
+    return `Folder: ${mode.folderName}`;
   }, [mode]);
 
   function openFolder(f: Folder) {
-    setFolderDecks(null);
-    setMode({ kind: "folder", folderId: f.id, folderName: f.name, count: f.count });
+    setMode({ kind: "folder", folderId: f.id, folderName: f.name });
   }
 
   function backToRecent() {
     setMode({ kind: "recent" });
-    // keep recent in memory so it pops back instantly
   }
 
-  const decksToShow = mode.kind === "recent" ? recent : folderDecks;
+  const decksToShow = mode.kind === "recent" ? recentDecks : currentFolderDecks;
 
   return (
     <main className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
@@ -128,16 +111,16 @@ export default function DecksPage() {
 
       {/* Top grid swaps between recent and folder decks */}
       <section>
-        {loading && (!decksToShow || decksToShow.length === 0) ? (
+        {loading ? (
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Loading…
           </div>
         ) : decksToShow && decksToShow.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {decksToShow.map(d => (
-              <a key={d.id} href={`/decks/${d.id}/study`} className="rounded-xl border p-6 hover:shadow-sm">
-                {d.name}
-              </a>
+              <Link key={d.id} href={`/decks/${d.id}/study`} className="rounded-xl border p-6 hover:shadow-sm">
+                {d.title}
+              </Link>
             ))}
           </div>
         ) : (
@@ -148,19 +131,27 @@ export default function DecksPage() {
       {/* Folders section stays visible for quick switching */}
       <section className="space-y-3">
         <h3 className="text-xl font-semibold">Folders</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {folders.map(f => (
-            <button
-              key={f.id}
-              onClick={() => openFolder(f)}
-              className="rounded-2xl border p-4 text-left hover:shadow-sm"
-              aria-label={`Open folder ${f.name}`}
-            >
-              <div className="font-medium">{f.name}</div>
-              <div className="text-xs text-muted-foreground">{f.count ?? "—"} sets</div>
-            </button>
-          ))}
-        </div>
+        {loading ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+            </div>
+        ) : allFolders.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {allFolders.map(f => (
+                <button
+                key={f.id}
+                onClick={() => openFolder(f)}
+                className="rounded-2xl border p-4 text-left hover:shadow-sm"
+                aria-label={`Open folder ${f.name}`}
+                >
+                <div className="font-medium">{f.name}</div>
+                <div className="text-xs text-muted-foreground">{f.decks.length ?? "—"} sets</div>
+                </button>
+            ))}
+            </div>
+        ) : (
+            <p className="text-sm text-muted-foreground">No folders created yet.</p>
+        )}
       </section>
     </main>
   );
