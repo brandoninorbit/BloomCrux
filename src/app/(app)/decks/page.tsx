@@ -121,11 +121,13 @@ export default function DecksPage() {
     return `Folder: ${mode.folderName}${suffix}`;
   }, [mode]);
   
-  const decksToShow: StitchDeck[] = useMemo(() => {
+  const recentDecks: StitchDeck[] = useMemo(() => {
     if (forceDemo || !user) return MOCK_DECKS_RECENT;
     const real = topics.flatMap((t) => t.decks || []).map(d => ({...d, title: d.title ?? (d as any).name}));
     return real.length ? real : [];
   }, [user, topics, forceDemo]);
+
+  const decksToShow = mode.kind === 'recent' ? recentDecks : (folderDecks as StitchDeck[] | null);
 
   const foldersToShow: MockFolder[] = useMemo(() => {
       if (forceDemo || !user) return MOCK_FOLDERS;
@@ -142,7 +144,7 @@ export default function DecksPage() {
     setMode({ kind: "recent" });
   }
 
-  if (loading && decksToShow.length === 0) {
+  if (loading && !decksToShow) {
     return (
       <div className="flex h-64 items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -169,14 +171,14 @@ export default function DecksPage() {
 
             {/* Top grid (recent or folder decks) */}
             <section>
-              {loading ? (
+              {loading && !decksToShow ? (
                 <div className="py-12 text-center">
                   <Loader2 className="h-8 w-8 animate-spin inline-block text-primary" />
                 </div>
               ) : decksToShow && decksToShow.length > 0 ? (
                 <DeckGrid decks={decksToShow as StitchDeck[]} />
               ) : (
-                <DeckGrid decks={MOCK_DECKS_RECENT as StitchDeck[]} />
+                 <p className="text-sm text-muted-foreground">No decks yet.</p>
               )}
             </section>
 
