@@ -17,10 +17,8 @@ type DeckProgress = {
 // A new, more detailed card component
 export function DeckCard({
   deck,
-  progress,
 }: {
   deck: (StitchDeck | DeckSummary) & { progress?: DeckProgress };
-  progress?: DeckProgress;
 }) {
   const levelTint: Record<BloomLevel, string> = {
     Remember:   "bg-blue-50 text-blue-700",
@@ -31,6 +29,7 @@ export function DeckCard({
     Create:     "bg-pink-50 text-pink-700",
   };
 
+  const progress = deck.progress;
   const pct = Math.max(0, Math.min(100, progress?.percent ?? 0));
   const title = 'title' in deck ? deck.title : deck.name;
 
@@ -44,9 +43,11 @@ export function DeckCard({
       <div className="relative w-full h-full bg-white rounded-xl shadow-md transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-1 flex flex-col justify-between">
         <div className="p-5 pb-3">
           <h3 className="text-center font-semibold text-slate-800">{title}</h3>
-          <div className="mt-4 space-y-2">
+          
+          {/* STATUS ROW — insert directly under the deck title */}
+          <div className="mt-3 space-y-2">
             {progress && (
-              <div className="flex items-center justify-center">
+              <div className="flex justify-center">
                 <span className={`px-2 py-0.5 text-xs rounded-full ${levelTint[progress.bloomLevel]}`}>
                   {progress.bloomLevel}
                 </span>
@@ -54,14 +55,14 @@ export function DeckCard({
             )}
             <div className="flex items-center gap-2">
               <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ duration: 0.6, ease: "easeOut" }}
-                  className="h-2 rounded-full bg-blue-500"
+                <div
+                  className="h-2 rounded-full bg-blue-500 transition-[width] duration-500"
+                  style={{ width: `${pct}%` }}
                 />
               </div>
-              <span className="w-10 text-right text-xs text-slate-500">{pct}%</span>
+              <span className="w-10 text-right text-xs text-slate-500">
+                {pct}%
+              </span>
             </div>
           </div>
         </div>
@@ -113,7 +114,7 @@ export function DeckGrid({ decks }: { decks: ((StitchDeck | DeckSummary) & { pro
           variants={itemVariants}
           className="h-full"
         >
-          <DeckCard deck={d} progress={d.progress} />
+          <DeckCard deck={d} />
         </motion.div>
       ))}
     </>
