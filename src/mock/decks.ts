@@ -2,12 +2,12 @@
 import type { Deck as StitchDeck } from '@/stitch/types';
 
 export type MockDeck = StitchDeck;
-export type MockFolder = { id: string; name: string; count?: number };
+export type MockFolder = { id: string; name: string; count?: number; color: 'blue' | 'green' | 'yellow'; sets: number; };
 
 export const MOCK_FOLDERS: MockFolder[] = [
-  { id: "f_science", name: "Science", count: 12 },
-  { id: "f_lang", name: "Languages", count: 8 },
-  { id: "f_hum", name: "Humanities", count: 15 },
+  { id: "f_science", name: "Science", count: 12, color: "blue", sets: 12 },
+  { id: "f_lang", name: "Languages", count: 8, color: "green", sets: 8 },
+  { id: "f_hum", name: "Humanities", count: 15, color: "yellow", sets: 15 },
 ];
 
 export const MOCK_DECKS_RECENT: MockDeck[] = [

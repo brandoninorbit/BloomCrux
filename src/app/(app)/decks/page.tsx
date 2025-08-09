@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import type { Topic as StitchTopic, Deck as StitchDeck } from '@/stitch/types';
 import { getTopics } from "@/lib/firestore";
-import { MOCK_DECKS_RECENT, MOCK_FOLDERS, MOCK_DECKS_BY_FOLDER, type MockDeck, type MockFolder } from "@/mock/decks";
+import { MOCK_DECKS_RECENT, MOCK_FOLDERS, type MockDeck, type MockFolder } from "@/mock/decks";
 import { DeckGrid } from "@/components/DeckGrid";
 
 // Force demo in Studio by visiting /decks?demo=1
@@ -30,6 +30,53 @@ const mockRequested =
   typeof window !== "undefined" &&
   (new URLSearchParams(window.location.search).has("demo") ||
     process.env.NEXT_PUBLIC_USE_MOCK === "1");
+
+const folderBg: Record<string, string> = {
+  blue: "bg-blue-100",
+  green: "bg-green-100",
+  yellow: "bg-yellow-100",
+};
+const folderText: Record<string, string> = {
+  blue: "text-blue-600",
+  green: "text-green-600",
+  yellow: "text-yellow-600",
+};
+
+function FolderCard({
+  name,
+  sets,
+  color = "blue",
+  onClick,
+}: {
+  name: string;
+  sets: number;
+  color?: "blue" | "green" | "yellow";
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="group w-full text-left bg-white rounded-2xl shadow-md p-5 flex items-center gap-5
+                 hover:shadow-lg hover:-translate-y-1 transition-transform duration-300 focus:outline-none
+                 focus-visible:ring-2 focus-visible:ring-primary/40"
+    >
+      <div
+        className={`w-12 h-12 rounded-lg flex items-center justify-center 
+                    ${folderBg[color]} ${folderText[color]}`}
+      >
+        {/* lock/stack icon */}
+        <svg className="h-6 w-6" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" fill="none">
+          <path d="M4 11h16v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7z" />
+          <path d="M8 11V8a4 4 0 1 1 8 0v3" />
+        </svg>
+      </div>
+      <div>
+        <p className="font-semibold">{name}</p>
+        <p className="text-sm text-muted-foreground">{sets} sets</p>
+      </div>
+    </button>
+  );
+}
 
 export default function DecksPage() {
   const { user, loading: authLoading } = useUserAuth();
@@ -183,14 +230,17 @@ export default function DecksPage() {
             </section>
 
             {/* Folders list (always visible) */}
-            <section className="space-y-3">
-              <h3 className="text-xl font-semibold">Folders</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {foldersToShow.map(f => (
-                  <button key={f.id} onClick={() => openFolder(f)} className="rounded-2xl border p-4 text-left hover:shadow-sm">
-                    <div className="font-medium">{f.name}</div>
-                    <div className="text-xs text-muted-foreground">{f.count ?? "—"} sets</div>
-                  </button>
+            <section className="mt-12">
+              <h3 className="text-2xl font-semibold mb-4">Folders</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {MOCK_FOLDERS.map((f) => (
+                  <FolderCard
+                    key={f.name}
+                    name={f.name}
+                    sets={f.sets}
+                    color={f.color as any} // "blue" | "green" | "yellow"
+                    onClick={() => openFolder?.({ id: f.id, name: f.name, count: f.sets } as any)}
+                  />
                 ))}
                 {foldersToShow.length === 0 && <p className="text-sm text-muted-foreground">No folders created yet.</p>}
               </div>
