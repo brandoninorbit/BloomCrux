@@ -13,12 +13,13 @@ import {
   PointerSensor,
   KeyboardSensor,
   useSensor,
-  useSensors
-, DragEndEvent } from '@dnd-kit/core';
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
 
 // Helper Component: A small, reusable component for each draggable item.
 // This makes the main component's JSX much cleaner.
-function DraggableItem({ item, isSubmitted }: { item: DndItem, isSubmitted: boolean }) {
+function DraggableItem({ item, isSubmitted, isCorrect }: { item: DndItem, isSubmitted: boolean, isCorrect: boolean | null }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: item.term,
     data: item, // Pass the whole item object for easy access in onDragEnd
@@ -36,10 +37,11 @@ function DraggableItem({ item, isSubmitted }: { item: DndItem, isSubmitted: bool
       style={style}
       {...listeners}
       {...attributes}
-      className={cn(`mb-2 p-3 border rounded-md shadow-sm transition-shadow`,
-        isDragging
-          ? "bg-primary text-primary-foreground shadow-lg" // Style for when an item is being dragged
-          : "bg-card"
+      className={cn(`mb-2 p-3 border rounded-md shadow-sm transition-all`,
+        isDragging && "bg-primary text-primary-foreground shadow-lg z-10",
+        !isSubmitted && "bg-card",
+        isSubmitted && isCorrect === true && "bg-green-50 border-green-500",
+        isSubmitted && isCorrect === false && "bg-red-50 border-red-500",
       )}
     >
       {item.term}
@@ -48,7 +50,7 @@ function DraggableItem({ item, isSubmitted }: { item: DndItem, isSubmitted: bool
 }
 
 // Helper Component: A reusable component for each droppable column.
-function DroppableColumn({ id, title, items, isSubmitted }: { id: string, title: string, items: DndItem[], isSubmitted: boolean }) {
+function DroppableColumn({ id, title, items, isSubmitted, checkCorrectness }: { id: string, title: string, items: DndItem[], isSubmitted: boolean, checkCorrectness: (item: DndItem, containerId: string) => boolean | null }) {
   const { setNodeRef, isOver } = useDroppable({
     id: id,
   });
@@ -57,7 +59,7 @@ function DroppableColumn({ id, title, items, isSubmitted }: { id: string, title:
     <div
       ref={setNodeRef}
       className={cn(`flex flex-col w-52 p-2 border rounded-lg transition-colors`,
-        isOver ? "bg-primary/10 border-primary" : "bg-muted/50", // Style for when an item is hovering over the column
+        isOver ? "bg-primary/10 border-primary" : "bg-muted/50",
         id === 'Unsorted' && 'border-dashed'
       )}
     >
@@ -65,9 +67,13 @@ function DroppableColumn({ id, title, items, isSubmitted }: { id: string, title:
         {title}
       </h3>
       <div className="min-h-[100px] flex-grow">
-        {/* Renders all items passed to it */}
         {items.map(item => (
-          <DraggableItem key={item.term} item={item} isSubmitted={isSubmitted} />
+          <DraggableItem 
+            key={item.term} 
+            item={item} 
+            isSubmitted={isSubmitted} 
+            isCorrect={checkCorrectness(item, id)}
+          />
         ))}
       </div>
     </div>
@@ -104,16 +110,12 @@ export default function DragSortCard({
 
   const [columns, setColumns] = useState(initialColumns);
   const [submitted, setSubmitted] = useState(false);
-  const [isCorrect, setIsCorrect] = useState(false);
-
-  // Key Change: dnd-kit uses sensors to detect input (mouse, keyboard, touch).
+  
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
 
   const allPlaced = columns.Unsorted.length === 0 &&
     card.categories.reduce((sum, cat) => sum + (columns[cat] || []).length, 0) === card.items.length;
 
-  // Key Change: The onDragEnd handler is rewritten for dnd-kit's event structure.
-  // It uses `active` (the item being dragged) and `over` (the droppable area it's over).
   const handleDragEnd = (event: DragEndEvent) => {
     if (submitted) return;
     const { active, over } = event;
@@ -125,11 +127,9 @@ export default function DragSortCard({
 
       if (!sourceColId || !draggedItem || sourceColId === destColId) return;
 
-      // Logic to move the item between columns in state.
       setColumns(prevColumns => {
         const newColumns = { ...prevColumns };
         
-        // Remove from source column
         const sourceItems = [...newColumns[sourceColId]];
         const itemIndex = sourceItems.findIndex(item => item.term === active.id);
         if (itemIndex > -1) {
@@ -137,7 +137,6 @@ export default function DragSortCard({
           newColumns[sourceColId] = sourceItems;
         }
 
-        // Add to destination column
         const destItems = newColumns[destColId] ? [...newColumns[destColId]] : [];
         destItems.push(draggedItem);
         newColumns[destColId] = destItems;
@@ -147,7 +146,6 @@ export default function DragSortCard({
     }
   };
 
-  // Helper function to find which column an item is currently in.
   const findContainer = (itemId: string) => {
     for (const colId in columns) {
         if (columns[colId].some(item => item.term === itemId)) {
@@ -157,25 +155,33 @@ export default function DragSortCard({
     return null;
   };
   
-  // Submission logic remains the same.
+  const checkCorrectness = (item: DndItem, containerId: string): boolean | null => {
+    if (!submitted || containerId === 'Unsorted') return null;
+    return item.correctCategory === containerId;
+  };
+  
   const handleSubmit = () => {
-    let correct = true;
-    card.categories.forEach((cat: string) => {
-      (columns[cat] || []).forEach((item: DndItem) => {
-        if (item.correctCategory !== cat) correct = false;
-      });
-    });
-    setIsCorrect(correct);
+    let overallCorrect = true;
+    if (columns.Unsorted.length > 0) {
+        overallCorrect = false;
+    } else {
+        card.categories.forEach((cat: string) => {
+          (columns[cat] || []).forEach((item: DndItem) => {
+            if (item.correctCategory !== cat) {
+              overallCorrect = false;
+            }
+          });
+        });
+    }
+    
     setSubmitted(true);
-    onLog(correct);
+    onLog(overallCorrect);
   };
 
   return (
     <div className="w-full">
       <p className="mb-4 text-center text-xl font-semibold">{card.prompt}</p>
       
-      {/* Key Change: The main JSX is now wrapped in DndContext. */}
-      {/* It's much simpler because the complex logic is in the helper components. */}
       <DndContext onDragEnd={handleDragEnd} sensors={sensors}>
         <div className="flex flex-wrap justify-center gap-4 pb-4">
           {Object.entries(columns).map(([colId, items]) => (
@@ -185,24 +191,19 @@ export default function DragSortCard({
               title={colId} 
               items={items}
               isSubmitted={submitted}
+              checkCorrectness={checkCorrectness}
             />
           ))}
         </div>
       </DndContext>
 
       <div className="mt-6 text-center">
-        {!submitted ? (
+        {!submitted && (
           <Button onClick={handleSubmit} disabled={!allPlaced}>
             Check Answer
           </Button>
-        ) : (
-          <p className={cn(`text-lg font-medium`, isCorrect ? "text-green-600" : "text-red-600")}>
-            {isCorrect ? "Ã¢Å“â€¦ All items sorted correctly!" : "Ã¢ÂÅ’ Some items are misplaced. Try again on your next review!"}
-          </p>
         )}
       </div>
     </div>
   );
 }
-
-

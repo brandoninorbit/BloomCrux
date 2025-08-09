@@ -678,7 +678,7 @@ export default function EditDeckPage() {
   
   const handlePreviewCard = (card: Flashcard) => {
       // For now, we only support CER previews.
-      if (card.cardFormat === 'CER' || card.cardFormat === 'Compare/Contrast') {
+      if (card.cardFormat === 'CER' || card.cardFormat === 'Compare/Contrast' || card.cardFormat === 'Drag and Drop Sorting') {
           setPreviewingCard(card);
       } else {
           toast({ title: 'Preview Not Available', description: `Interactive preview for ${card.cardFormat} cards is coming soon.` });
@@ -814,7 +814,16 @@ export default function EditDeckPage() {
                        <StudyCard
                           card={previewingCard}
                           deckId={deck.id}
-                          onLogAttempt={() => {}}
+                          onLogAttempt={(card, wasCorrect) => {
+                            // For logged-in users, you might still want to log,
+                            // or just show a toast. For logged-out, do nothing.
+                            if (user) {
+                                console.log(`Preview attempt: ${wasCorrect ? 'Correct' : 'Incorrect'}`);
+                                toast({ title: `Attempt: ${wasCorrect ? 'Correct' : 'Incorrect'}` });
+                            } else {
+                                toast({ title: 'In preview mode (logged out)', description: `Answer was ${wasCorrect ? 'Correct' : 'Incorrect'}`});
+                            }
+                          }}
                           onNextCard={() => setPreviewingCard(null)}
                           isRetryArmed={false}
                           onUseRetry={() => {}}

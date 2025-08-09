@@ -392,7 +392,7 @@ export function StudyCard({ card, onLogAttempt, onNextCard, isAnswered: external
             </div>
         );
       case 'Drag and Drop Sorting':
-        return <div className={cn(isXpBoosted && "xp-boost-glow rounded-2xl")}><DragSortCard card={card as DragAndDropSortingCard} onLog={handleDragSortLog} /></div>;
+        return <div className={cn("bg-white rounded-2xl shadow-lg p-8", isXpBoosted && "xp-boost-glow")}><DragSortCard card={card as DragAndDropSortingCard} onLog={handleDragSortLog} /></div>;
       case 'Sequencing':
         return <div className={cn(isXpBoosted && "xp-boost-glow rounded-2xl")}><SequencingCard card={card as SequencingCardType} onLog={handleSequencingLog} /></div>;
       case 'CER':
