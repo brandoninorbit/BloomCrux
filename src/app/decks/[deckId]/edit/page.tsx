@@ -38,40 +38,14 @@ export default function EditDeckPage() {
   useEffect(() => {
     const fetchDeckData = async () => {
       setLoading(true);
-      if (user) {
-        try {
-          // Fetch deck but initially without cards
-          const fetchedDeck = await getDeck(user.uid, deckId);
-          if (fetchedDeck) {
-            const { cards: fetchedCards, ...deckData } = fetchedDeck;
-            setDeck(deckData); // Set deck metadata
-            setCards(fetchedCards); // Store cards separately
-            setTitle(deckData.title);
-            setDescription(deckData.description);
-          } else {
-            toast({
-              variant: "destructive",
-              title: "Not Found",
-              description: "Could not find the requested deck.",
-            });
-            router.push('/decks');
-          }
-        } catch (error) {
-          console.error("Failed to fetch deck:", error);
-          toast({
-              variant: "destructive",
-              title: "Error",
-              description: "Failed to load your deck.",
-          });
-        } finally {
-          setLoading(false);
-        }
-      } else {
+      if (!user) {
+        // Mock data path for logged-out users
         const allMocks = [...MOCK_DECKS_RECENT, ...Object.values(MOCK_DECKS_BY_FOLDER).flat()];
         const mockDeck = allMocks.find(d => d.id === deckId);
         if (mockDeck) {
-            setDeck(mockDeck);
-            setCards(mockDeck.cards);
+            const { cards: fetchedCards, ...deckData } = mockDeck;
+            setDeck(deckData);
+            setCards(fetchedCards || []);
             setTitle(mockDeck.title);
             setDescription(mockDeck.description);
         } else {
@@ -79,6 +53,35 @@ export default function EditDeckPage() {
             setTitle('Mock Deck Not Found');
             setDescription('Please check the deck ID.');
         }
+        setLoading(false);
+        return;
+      }
+      
+      // Real data path for logged-in users
+      try {
+        const fetchedDeck = await getDeck(user.uid, deckId);
+        if (fetchedDeck) {
+          const { cards: fetchedCards, ...deckData } = fetchedDeck;
+          setDeck(deckData); // Set deck metadata
+          setCards(fetchedCards || []); // Store cards separately
+          setTitle(deckData.title);
+          setDescription(deckData.description);
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Not Found",
+            description: "Could not find the requested deck.",
+          });
+          router.push('/decks');
+        }
+      } catch (error) {
+        console.error("Failed to fetch deck:", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to load your deck.",
+        });
+      } finally {
         setLoading(false);
       }
     };
@@ -281,7 +284,7 @@ export default function EditDeckPage() {
                         <div className="flex gap-1">
                             <Button variant="ghost" size="icon"><Star className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" className="hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
                         </div>
                     </CardContent>
                 </Card>
