@@ -13,9 +13,9 @@
 
 
 
+
 import { collection, getDocs, query, where, addDoc, serverTimestamp, Timestamp, doc, setDoc, getDoc, runTransaction, writeBatch, increment, deleteDoc, onSnapshot, Unsubscribe, collectionGroup, orderBy, limit } from 'firebase/firestore';
 import { getDb, getFirebaseStorage, getFirebaseAuth } from './firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { Flashcard, CardAttempt, Topic, UserDeckProgress, UserPowerUps, Deck, BloomLevel, PowerUpType, PurchaseCounts, GlobalProgress, ShopItem, UserInventory, UserXpStats, UserCustomizations, SelectedCustomizations, UserSettings } from '../types';
 import { GLOBAL_SHOP_ITEMS } from './shop-items';
 import { calculateXpForCorrectAnswer } from './xpCalculator';
@@ -421,8 +421,8 @@ export async function getDeckProgress(userId: string): Promise<CardAttempt[]> {
     const data = doc.data();
     attempts.push({
       id: doc.id,
-      ...data,
-      timestamp: (data.timestamp as Timestamp).toDate(), // Convert Firestore Timestamp to JS Date
+      ...(data as Omit<CardAttempt, 'id' | 'timestamp'>),
+      timestamp: (data.timestamp as Timestamp).toDate(),
     } as CardAttempt);
   });
   
