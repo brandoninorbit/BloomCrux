@@ -31,17 +31,19 @@ export default function DecksPage() {
 
   // Load all user data (topics/decks) once, when the user object is available.
   useEffect(() => {
-    // Don't fetch until the auth state is resolved.
+    // Wait until the auth state is resolved.
     if (authLoading) return;
+
+    // If there's no user, don't try to fetch data. Stop loading and show the empty state.
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     const fetchData = async () => {
       setLoading(true);
-      // Determine the user ID *inside* the effect.
-      // If logged out, use the mock user. If logged in, use their real ID.
-      const uid = user?.uid || 'demo-user';
-
       try {
-        const topics = await getTopics(uid);
+        const topics = await getTopics(user.uid);
         const decks = topics.flatMap(t => t.decks ?? []);
         
         const folders: Folder[] = topics.map(t => ({
@@ -54,7 +56,6 @@ export default function DecksPage() {
         setAllFolders(folders);
       } catch (error) {
           console.error("Failed to fetch decks data:", error);
-          // Handle error case, e.g., show a toast or message
           setAllDecks([]);
           setAllFolders([]);
       } finally {
