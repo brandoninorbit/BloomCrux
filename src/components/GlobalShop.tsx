@@ -4,12 +4,16 @@
 import React from 'react';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
 import { getShopItems, purchaseShopItem } from '@/lib/firestore';
-import type { ShopItem } from '@/types';
+import type { ShopItem } from '@/stitch/types';
 import { Loader2 } from 'lucide-react';
 import ShopItemCard from './ShopItemCard';
 import { useToast } from '@/hooks/use-toast';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import PowerUpInventory from './PowerUpInventory';
+import { GLOBAL_SHOP_ITEMS } from '@/lib/shop-items';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Info } from 'lucide-react';
+import Link from 'next/link';
 
 const GlobalShop = () => {
     const { user } = useUserAuth();
@@ -20,6 +24,8 @@ const GlobalShop = () => {
 
     React.useEffect(() => {
         if (!user) {
+            // For logged-out users, show mock data immediately.
+            setItems(GLOBAL_SHOP_ITEMS as ShopItem[]);
             setLoading(false);
             return;
         }
@@ -39,7 +45,14 @@ const GlobalShop = () => {
     }, [user, toast]);
 
     const handlePurchase = async (item: ShopItem) => {
-        if (!user) return;
+        if (!user) {
+            toast({
+                title: 'Login Required',
+                description: 'You must be logged in to make purchases.',
+                variant: 'destructive',
+            });
+            return;
+        };
         try {
             await purchaseShopItem(user.uid, item);
             toast({
@@ -62,6 +75,15 @@ const GlobalShop = () => {
     
     return (
         <div className="space-y-8">
+            {!user && (
+                 <Alert variant="default" className="bg-blue-50 border-blue-200">
+                    <Info className="h-5 w-5 text-blue-700" />
+                    <AlertTitle className="text-blue-800 font-semibold">Viewing Mock Data</AlertTitle>
+                    <AlertDescription className="text-blue-700">
+                    This is a preview of the shop. Please <Link href="/login" className="font-bold underline">log in</Link> to make purchases.
+                    </AlertDescription>
+                </Alert>
+            )}
             <PowerUpInventory />
             
             {items.length > 0 ? (
