@@ -172,7 +172,7 @@ export default function EditDeckPage() {
   const [sourceToDelete, setSourceToDelete] = useState<string | null>(null);
 
   // State for sorting
-  const [sortOrder, setSortOrder] = useState('Default');
+  const [sortOrder, setSortOrder] = useState<'default'|'bloom'|'format'|'source'>('default');
 
   useEffect(() => {
     const fetchDeckData = async () => {
@@ -340,86 +340,77 @@ export default function EditDeckPage() {
   }
 
   const groupedCards = useMemo(() => {
-    if (!cards) return { Default: [] as Flashcard[] };
-    if (sortOrder === 'Default') return { Default: cards };
-
-    // Normalize helpers
-    const bloomTitle = (s?: string) => {
-        if (!s) return 'Uncategorized';
-        const x = s.toLowerCase();
-        const map: Record<string, BloomLevel> = {
+    const norm = (s?: string | null) => (s ?? '').trim();
+    const bloomTitle = (raw?: string) => {
+      if (!raw) return 'Uncategorized';
+      const x = raw.toLowerCase();
+      const map: Record<string, BloomLevel | 'Uncategorized'> = {
         remember: 'Remember',
         understand: 'Understand',
         apply: 'Apply',
         analyze: 'Analyze',
+        analyse: 'Analyze', // UK variant just in case
         evaluate: 'Evaluate',
         create: 'Create',
-        };
-        return (map[x] ?? 'Uncategorized') as BloomLevel | 'Uncategorized';
+      };
+      return map[x] ?? 'Uncategorized';
     };
-
-    const trimStr = (s?: string | null) =>
-        (s ?? '').toString().trim();
-
+  
     const getGroupKey = (card: Flashcard): string => {
-        if (sortOrder === "Bloom's Level") return bloomTitle(card.bloomLevel);
-        if (sortOrder === 'Card Format') return trimStr(card.cardFormat) || 'Uncategorized';
-        if (sortOrder === 'Source') {
-        // If you later add card.source, this will neatly group by it
-        return trimStr((card as any).source) || 'Unknown Source';
-        }
-        return 'Uncategorized';
+      if (sortOrder === 'bloom') return bloomTitle(card.bloomLevel);
+      if (sortOrder === 'format') return norm(card.cardFormat) || 'Uncategorized';
+      if (sortOrder === 'source') return norm((card as any).source) || 'Unknown Source';
+      return 'Default';
     };
-
+  
     // Group
-    const grouped = cards.reduce((acc, card) => {
-        const key = getGroupKey(card);
-        (acc[key] ||= []).push(card);
-        return acc;
+    const grouped = (cards ?? []).reduce((acc, c) => {
+      const key = getGroupKey(c);
+      (acc[key] ||= []).push(c);
+      return acc;
     }, {} as Record<string, Flashcard[]>);
-
-    // Sort items within each group (by questionStem asc, then id)
-    const sortCardsInPlace = (arr: Flashcard[]) =>
-        arr.sort((a, b) => {
-        const A = trimStr(a.questionStem).toLowerCase();
-        const B = trimStr(b.questionStem).toLowerCase();
-        if (A < B) return  -1;
-        if (A > B) return  1;
-        return trimStr(a.id).localeCompare(trimStr(b.id));
-        });
-
-    // Order the groups
-    if (sortOrder === "Bloom's Level") {
-        const bloomOrder: (BloomLevel | 'Uncategorized')[] = [
-        'Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create', 'Uncategorized'
-        ];
-        const ordered: Record<string, Flashcard[]> = {};
-        for (const key of bloomOrder) {
-        if (grouped[key]) {
-            ordered[key] = sortCardsInPlace(grouped[key]);
-        }
-        }
-        // Any unexpected keys go after
-        Object.keys(grouped).forEach(k => {
-        if (!(k in ordered)) ordered[k] = sortCardsInPlace(grouped[k]);
-        });
-        return ordered;
+  
+    // sort inside each group: by questionStem then id
+    const sortCards = (arr: Flashcard[]) =>
+      arr.sort((a, b) => {
+        const A = norm(a.questionStem).toLowerCase();
+        const B = norm(b.questionStem).toLowerCase();
+        if (A < B) return -1;
+        if (A > B) return 1;
+        return norm(a.id).localeCompare(norm(b.id));
+      });
+  
+    if (sortOrder === 'bloom') {
+      const order: (BloomLevel | 'Uncategorized')[] = [
+        'Remember','Understand','Apply','Analyze','Evaluate','Create','Uncategorized'
+      ];
+      const ordered: Record<string, Flashcard[]> = {};
+      for (const k of order) if (grouped[k]) ordered[k] = sortCards(grouped[k]);
+      for (const k of Object.keys(grouped)) if (!(k in ordered)) ordered[k] = sortCards(grouped[k]);
+      return ordered;
     }
-
-    if (sortOrder === 'Card Format' || sortOrder === 'Source') {
-        const ordered: Record<string, Flashcard[]> = {};
-        const keys = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
-        for (const k of keys) {
-        ordered[k] = sortCardsInPlace(grouped[k]);
-        }
-        return ordered;
+  
+    if (sortOrder === 'format' || sortOrder === 'source') {
+      const ordered: Record<string, Flashcard[]> = {};
+      for (const k of Object.keys(grouped).sort((a,b)=>a.localeCompare(b))) {
+        ordered[k] = sortCards(grouped[k]);
+      }
+      return ordered;
     }
-
-    // Fallback
-    Object.values(grouped).forEach(sortCardsInPlace);
-    return grouped;
+  
+    // default: single bucket, keep original order
+    return { Default: cards ?? [] };
   }, [cards, sortOrder]);
   
+  const bloomCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    (cards ?? []).forEach(c => {
+        const key = (c.bloomLevel ?? 'Uncategorized').toString();
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return Array.from(counts.entries()); // e.g., [["Remember",16]]
+  }, [cards]);
+
   const starredCount = cards.filter(c => c.isStarred).length || 0;
   const mockSources = deck?.sources || ["questions_batch1_fixed.csv", "questions_batch2_fixed.csv", "questions_batch3_fixed.csv"];
 
@@ -441,9 +432,9 @@ export default function EditDeckPage() {
   
   const renderCard = (card: Flashcard) => {
     let prefix = '';
-    if (sortOrder === 'Bloom\'s Level') {
+    if (sortOrder === 'bloom') {
         prefix = `[${card.bloomLevel}]`;
-    } else if (sortOrder === 'Card Format') {
+    } else if (sortOrder === 'format') {
         prefix = `[${card.cardFormat}]`;
     }
     
@@ -605,19 +596,24 @@ export default function EditDeckPage() {
         </Card>
 
         <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Cards in this Deck ({cards.length})</h2>
+            <div>
+              <h2 className="text-2xl font-bold">Cards in this Deck ({cards.length})</h2>
+              <div className="text-sm text-muted-foreground">
+                {bloomCounts.map(([k,v]) => <span key={k} className="mr-3">{k}: {v}</span>)}
+              </div>
+            </div>
             {cardsLoaded && (
                 <div className="flex items-center gap-2">
                     <Label htmlFor="sort-order">Sort Cards By</Label>
-                    <Select value={sortOrder} onValueChange={setSortOrder}>
+                    <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as any)}>
                         <SelectTrigger id="sort-order" className="w-[180px]">
                             <SelectValue placeholder="Sort by..." />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="Default">Default</SelectItem>
-                            <SelectItem value="Bloom's Level">Bloom's Level</SelectItem>
-                            <SelectItem value="Card Format">Card Format</SelectItem>
-                            <SelectItem value="Source">Source</SelectItem>
+                            <SelectItem value="default">Default</SelectItem>
+                            <SelectItem value="bloom">Bloom’s Level</SelectItem>
+                            <SelectItem value="format">Card Format</SelectItem>
+                            <SelectItem value="source">Source</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -637,7 +633,7 @@ export default function EditDeckPage() {
              <div className="space-y-6">
                 {Object.entries(groupedCards).map(([groupName, groupCards]) => (
                     <div key={groupName}>
-                        {sortOrder !== 'Default' && groupCards.length > 0 && (
+                        {sortOrder !== 'default' && groupCards.length > 0 && (
                             <h3 className="text-md font-semibold text-muted-foreground mb-3">
                                 {groupName} ({groupCards.length})
                             </h3>
