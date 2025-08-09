@@ -102,6 +102,7 @@ export default function StudyHubPage() {
     const deckLevel = progress?.level || 1;
     const deckXp = progress?.xp || 0;
     const deckXpToNext = progress?.xpToNext || 100;
+    const hasStartedQuest = progress && progress.lastCardIndex > 0;
 
     return (
         <main className="min-h-screen bg-gray-50/50">
@@ -148,11 +149,17 @@ export default function StudyHubPage() {
                         title="Operation: Quest"
                         description="Standard-issue progression. Complete objectives in order."
                     >
-                        <Button className="w-full" disabled>Continue Mission</Button>
-                        <Button variant="ghost" className="w-full" disabled>
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            Restart Mission
-                        </Button>
+                        {hasStartedQuest ? (
+                            <>
+                                <Button className="w-full" disabled>Continue Mission</Button>
+                                <Button variant="ghost" className="w-full" disabled>
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                    Restart Mission
+                                </Button>
+                            </>
+                        ) : (
+                            <Button className="w-full" disabled>Begin Mission</Button>
+                        )}
                     </MissionCard>
                     <MissionCard
                         icon={Shuffle}
@@ -188,6 +195,13 @@ export default function StudyHubPage() {
                         description="Advance your clearance one cognitive level at a time."
                     >
                          <Button className="w-full" disabled>Enter Level-Up</Button>
+                    </MissionCard>
+                    <MissionCard
+                        icon={Rocket}
+                        title="Operation: Topic Trek"
+                        description="Infiltrate specific subjects by topic tag."
+                    >
+                         <Button className="w-full" disabled>Explore Topics</Button>
                     </MissionCard>
                 </div>
             </div>
