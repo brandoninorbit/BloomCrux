@@ -34,25 +34,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 // CSV PARSING HELPERS
 const stripBOM = (s: string) => s.replace(/^\uFEFF/, '');
 const asciiQuotes = (s: string) => s.replace(/[’‘]/g, "'").replace(/[“”]/g, '"');
-const normKey = (k: string) => asciiQuotes(stripBOM(k)).trim().toLowerCase();
 
-const normalizeRowKeys = (row: any) => {
-  const out: Record<string, any> = {};
-  Object.keys(row).forEach(k => {
-    out[normKey(k)] = row[k];
-  });
-  return out;
-};
-
-const from = (row: any, ...names: string[]) => {
+const get = (row: any, ...names: string[]) => {
   for (const n of names) {
-    const v = row[n.toLowerCase()];
+    const v = row[n]; // keys already lowercased by transformHeader
     if (v != null && String(v).trim() !== '') return String(v);
   }
   return '';
 };
 
-const toBloom = (s: string): BloomLevel | null => {
+const normBloom = (s: string): BloomLevel | null => {
   const m = s.trim().toLowerCase();
   if (m === 'remember') return 'Remember';
   if (m === 'understand') return 'Understand';
@@ -63,17 +54,17 @@ const toBloom = (s: string): BloomLevel | null => {
   return null;
 };
 
-
 // Function to transform a parsed CSV row into a Flashcard object
 const transformRowToCard = (row: any): Flashcard | null => {
-    const cardTypeRaw = from(row, 'cardtype', 'card type', 'format', 'type');
-    const cardType = cardTypeRaw as CardFormat;
+    // row.* keys are lowercase now
+    const cardType = get(row, 'cardtype', 'card type', 'format', 'type') as CardFormat;
     if (!cardType) return null;
 
-    let questionText = from(row, 'question', 'prompt', 'title');
-    const csvBloom = from(row, 'bloom', "bloom's level", "bloom’s level", 'bloomlevel', 'blooms level');
+    let questionText = get(row, 'question', 'prompt', 'title');
+
+    const csvBloom = get(row, 'bloom', "bloom's level", 'bloom’s level', 'bloomlevel', 'blooms level');
     const bracket = (questionText.match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i)?.[1] ?? '');
-    const bloomLevel = (toBloom(csvBloom) ?? toBloom(bracket) ?? 'Remember') as BloomLevel;
+    const bloomLevel = (normBloom(csvBloom) ?? normBloom(bracket) ?? 'Remember') as BloomLevel;
     if (bracket) questionText = questionText.replace(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]\s*/i, '').trim();
 
 
@@ -88,56 +79,57 @@ const transformRowToCard = (row: any): Flashcard | null => {
 
     switch (cardType) {
         case 'Standard MCQ':
-            const answerA = from(row, 'answer', 'correctanswer');
+            const optionsMCQ = [get(row,'a'), get(row,'b'), get(row,'c'), get(row,'d')].filter(Boolean);
+            const answerMCQ = get(row, 'answer', 'correctanswer');
             return {
                 ...baseCard,
                 tier1: {
                     question: questionText,
-                    options: [from(row, 'a'), from(row, 'b'), from(row, 'c'), from(row, 'd')].filter(Boolean),
-                    correctAnswerIndex: ['A', 'B', 'C', 'D'].indexOf(answerA.toUpperCase()),
-                    distractorRationale: { explanation: from(row, 'explanation', 'rationale') }
+                    options: optionsMCQ,
+                    correctAnswerIndex: ['a', 'b', 'c', 'd'].indexOf(answerMCQ.toLowerCase()),
+                    distractorRationale: { explanation: get(row, 'explanation', 'rationale') }
                 }
             } as Flashcard;
         case 'Two-Tier MCQ':
-             const answerT1 = from(row, 'answer', 'tier1answer');
-             const answerT2 = from(row, 'tier2answer');
+             const answerT1 = get(row, 'answer', 'tier1answer');
+             const answerT2 = get(row, 'tier2answer');
              return {
                 ...baseCard,
                 tier1: {
                     question: questionText,
-                    options: [from(row, 'a'), from(row, 'b'), from(row, 'c'), from(row, 'd')].filter(Boolean),
-                    correctAnswerIndex: ['A', 'B', 'C', 'D'].indexOf(answerT1.toUpperCase()),
+                    options: [get(row, 'a'), get(row, 'b'), get(row, 'c'), get(row, 'd')].filter(Boolean),
+                    correctAnswerIndex: ['a', 'b', 'c', 'd'].indexOf(answerT1.toLowerCase()),
                 },
                 tier2: {
-                    question: from(row, 'tier2question'),
-                    options: [from(row, 'tier2a'), from(row, 'tier2b'), from(row, 'tier2c'), from(row, 'tier2d')].filter(Boolean),
-                    correctAnswerIndex: ['A', 'B', 'C', 'D'].indexOf(answerT2.toUpperCase()),
+                    question: get(row, 'tier2question'),
+                    options: [get(row, 'tier2a'), get(row, 'tier2b'), get(row, 'tier2c'), get(row, 'tier2d')].filter(Boolean),
+                    correctAnswerIndex: ['a', 'b', 'c', 'd'].indexOf(answerT2.toLowerCase()),
                 }
             } as Flashcard;
         case 'Fill in the Blank':
             return {
                 ...baseCard,
                 prompt: questionText,
-                correctAnswer: from(row, 'answer', 'correctanswer')
+                correctAnswer: get(row, 'answer', 'correctanswer')
             } as Flashcard;
         case 'Short Answer':
             return {
                 ...baseCard,
                 prompt: questionText,
-                suggestedAnswer: from(row, 'suggestedanswer', 'answer')
+                suggestedAnswer: get(row, 'suggestedanswer', 'answer')
             } as Flashcard;
         case 'Compare/Contrast':
             return {
                 ...baseCard,
-                itemA: from(row, 'itema'),
-                itemB: from(row, 'itemb'),
-                pairs: (from(row, 'pairs')).split('|').map((p: string) => {
+                itemA: get(row, 'itema'),
+                itemB: get(row, 'itemb'),
+                pairs: (get(row, 'pairs')).split('|').map((p: string) => {
                     const [feature, pointA, pointB] = p.split(';');
                     return { feature, pointA, pointB };
                 })
             } as Flashcard;
         case 'Drag and Drop Sorting':
-            const items: DndItem[] = (from(row, 'items')).split('|').map((item: string) => {
+            const items: DndItem[] = (get(row, 'items')).split('|').map((item: string) => {
                 const [term, correctCategory] = item.split(';');
                 return { term, correctCategory };
             });
@@ -149,7 +141,7 @@ const transformRowToCard = (row: any): Flashcard | null => {
                 categories,
             } as Flashcard;
         case 'Sequencing':
-            const seqItems = (from(row, 'items')).split('|');
+            const seqItems = (get(row, 'items')).split('|');
             return {
                 ...baseCard,
                 prompt: questionText,
@@ -157,7 +149,7 @@ const transformRowToCard = (row: any): Flashcard | null => {
                 correctOrder: seqItems,
             } as Flashcard;
         case 'CER':
-            const parts: CERPart[] = (from(row, 'parts')).split('|').map((partStr: string) => {
+            const parts: CERPart[] = (get(row, 'parts')).split('|').map((partStr: string) => {
                 const [key, type, ...rest] = partStr.split(';');
                 if (type === 'text') {
                     return { key, inputType: 'text', sampleAnswer: rest[0] };
@@ -170,7 +162,7 @@ const transformRowToCard = (row: any): Flashcard | null => {
 
             return {
                 ...baseCard,
-                prompt: from(row, 'scenario'),
+                prompt: get(row, 'scenario'),
                 question: questionText,
                 parts,
             } as Flashcard;
@@ -305,12 +297,18 @@ export default function EditDeckPage() {
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
+        transformHeader(h) {
+          return asciiQuotes(stripBOM(h)).trim().toLowerCase();
+        },
         complete: (results) => {
-            const normalizedRows = (results.data as any[]).map(normalizeRowKeys);
-            const imported = normalizedRows
-                .map(row => transformRowToCard(row))
-                .filter((card): card is Flashcard => card !== null);
+            const first = (results.data as any[])[0] ?? {};
+            console.debug('[headers]', Object.keys(first));
+
+            const imported = (results.data as any[])
+              .map(row => transformRowToCard(row))
+              .filter((card): card is Flashcard => card !== null);
             
+            console.table(imported.slice(0,10).map(c => ({ bloom: c.bloomLevel, type: c.cardFormat })));
             setNewlyImportedCards(imported);
 
             if(imported.length > 0) {
