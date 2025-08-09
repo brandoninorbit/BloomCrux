@@ -39,7 +39,7 @@ const DEFAULT_BLOOM_BY_FORMAT: Record<CardFormat, BloomLevel> = {
   'Drag and Drop Sorting': 'Apply',
   'Sequencing': 'Apply',
   'Two-Tier MCQ': 'Evaluate',
-  'CER': 'Evaluate',
+  'CER': 'Create',
   'text': 'Remember',
   'code': 'Apply',
   'other': 'Remember',
