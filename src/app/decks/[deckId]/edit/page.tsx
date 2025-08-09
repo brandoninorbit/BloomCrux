@@ -679,7 +679,7 @@ export default function EditDeckPage() {
   const handlePreviewCard = (card: Flashcard) => {
       const supportedFormats = [
         'CER', 'Compare/Contrast', 'Drag and Drop Sorting',
-        'Fill in the Blank', 'Short Answer'
+        'Fill in the Blank', 'Short Answer', 'Sequencing'
       ];
       if (supportedFormats.includes(card.cardFormat)) {
           setPreviewingCard(card);
