@@ -32,8 +32,35 @@ export default function EditDeckPage() {
 
   useEffect(() => {
     const fetchDeckData = async () => {
-      if (!user) {
-        // If not logged in, find the mock deck to display for layout purposes
+      setLoading(true);
+      if (user) {
+        // User is logged in, fetch from Firestore
+        try {
+          const fetchedDeck = await getDeck(user.uid, deckId);
+          if (fetchedDeck) {
+            setDeck(fetchedDeck);
+            setTitle(fetchedDeck.title);
+            setDescription(fetchedDeck.description);
+          } else {
+            toast({
+              variant: "destructive",
+              title: "Not Found",
+              description: "Could not find the requested deck.",
+            });
+            router.push('/decks');
+          }
+        } catch (error) {
+          console.error("Failed to fetch deck:", error);
+          toast({
+              variant: "destructive",
+              title: "Error",
+              description: "Failed to load your deck.",
+          });
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        // User is not logged in, use mock data immediately
         const allMocks = [...MOCK_DECKS_RECENT, ...Object.values(MOCK_DECKS_BY_FOLDER).flat()];
         const mockDeck = allMocks.find(d => d.id === deckId);
         if (mockDeck) {
@@ -41,39 +68,10 @@ export default function EditDeckPage() {
             setTitle(mockDeck.title);
             setDescription(mockDeck.description);
         } else {
-            // Fallback for an unknown mock ID
             setDeck({ id: 'mock-deck', title: 'Mock Deck Not Found', description: 'Please check the deck ID.', cards: [] });
             setTitle('Mock Deck Not Found');
             setDescription('Please check the deck ID.');
         }
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const fetchedDeck = await getDeck(user.uid, deckId);
-        if (fetchedDeck) {
-          setDeck(fetchedDeck);
-          setTitle(fetchedDeck.title);
-          setDescription(fetchedDeck.description);
-        } else {
-          // Handle deck not found
-          toast({
-            variant: "destructive",
-            title: "Not Found",
-            description: "Could not find the requested deck.",
-          })
-          router.push('/decks');
-        }
-      } catch (error) {
-        console.error("Failed to fetch deck:", error);
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Failed to load your deck.",
-        })
-      } finally {
         setLoading(false);
       }
     };
