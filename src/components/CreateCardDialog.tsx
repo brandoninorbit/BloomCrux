@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { Flashcard, StandardMCQCard, CardFormat, FillInTheBlankCard, ShortAnswerCard, BloomLevel, CompareContrastCard } from '@/stitch/types';
+import type { Flashcard, StandardMCQCard, CardFormat, FillInTheBlankCard, ShortAnswerCard, BloomLevel, CompareContrastCard, DragAndDropSortingCard, DndItem } from '@/stitch/types';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Info, PlusCircle, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from './ui/tooltip';
@@ -64,6 +64,11 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
   const [itemA, setItemA] = useState('');
   const [itemB, setItemB] = useState('');
   const [comparisonPairs, setComparisonPairs] = useState([{ feature: '', pointA: '', pointB: '' }]);
+
+  // Drag and Drop Sorting State
+  const [dndPrompt, setDndPrompt] = useState('');
+  const [dndCategories, setDndCategories] = useState(['']);
+  const [dndItems, setDndItems] = useState<DndItem[]>([{ term: '', correctCategory: '' }]);
   
   useEffect(() => {
     // When card type changes, update the default bloom level
@@ -81,6 +86,9 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
     setItemA('');
     setItemB('');
     setComparisonPairs([{ feature: '', pointA: '', pointB: '' }]);
+    setDndPrompt('');
+    setDndCategories(['']);
+    setDndItems([{ term: '', correctCategory: '' }]);
   };
 
   const handleSave = () => {
@@ -155,6 +163,23 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
                 pairs: comparisonPairs,
             } as CompareContrastCard;
             break;
+        
+        case 'Drag and Drop Sorting':
+            if (!dndPrompt.trim() || dndCategories.some(c => !c.trim()) || dndItems.some(i => !i.term.trim() || !i.correctCategory.trim())) {
+                alert('Please fill out the prompt, all categories, and all items for sorting.');
+                return;
+            }
+            newCard = {
+                id: crypto.randomUUID(),
+                cardFormat: 'Drag and Drop Sorting',
+                questionStem: dndPrompt,
+                prompt: dndPrompt,
+                categories: dndCategories.filter(c => c.trim()),
+                items: dndItems,
+                topic: 'Manual',
+                bloomLevel,
+            } as DragAndDropSortingCard;
+            break;
             
         default:
             alert("This card type hasn't been implemented yet.");
@@ -186,6 +211,32 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
     const newPairs = comparisonPairs.filter((_, i) => i !== index);
     setComparisonPairs(newPairs);
   };
+  
+  const handleCategoryChange = (index: number, value: string) => {
+    const newCategories = [...dndCategories];
+    newCategories[index] = value;
+    setDndCategories(newCategories);
+  };
+
+  const addCategory = () => setDndCategories([...dndCategories, '']);
+  
+  const removeCategory = (index: number) => {
+    const categoryToRemove = dndCategories[index];
+    setDndCategories(dndCategories.filter((_, i) => i !== index));
+    // Also clear this category from any items that were using it
+    setDndItems(dndItems.map(item => item.correctCategory === categoryToRemove ? { ...item, correctCategory: '' } : item));
+  };
+  
+  const handleDndItemChange = <K extends keyof DndItem>(index: number, field: K, value: DndItem[K]) => {
+    const newItems = [...dndItems];
+    newItems[index][field] = value;
+    setDndItems(newItems);
+  };
+  
+  const addItem = () => setDndItems([...dndItems, { term: '', correctCategory: '' }]);
+
+  const removeItem = (index: number) => setDndItems(dndItems.filter((_, i) => i !== index));
+
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -222,7 +273,7 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
                         <span className="text-lg">🔧</span> Apply / Analyze
                       </SelectLabel>
                       <SelectItem value="Compare/Contrast">Compare/Contrast</SelectItem>
-                      <SelectItem value="Drag and Drop Sorting" disabled>Drag & Drop Sorting</SelectItem>
+                      <SelectItem value="Drag and Drop Sorting">Drag & Drop Sorting</SelectItem>
                       <SelectItem value="Sequencing" disabled>Sequencing</SelectItem>
                     </SelectGroup>
                     <SelectGroup>
@@ -407,6 +458,72 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
                         Add Comparison Point
                     </Button>
                 </div>
+              )}
+              
+              {cardType === 'Drag and Drop Sorting' && (
+                 <div className="space-y-6">
+                    <div>
+                        <Label htmlFor="dnd-prompt">Prompt / Instructions</Label>
+                        <Textarea id="dnd-prompt" value={dndPrompt} onChange={(e) => setDndPrompt(e.target.value)} placeholder="Sort the terms into the correct categories." />
+                    </div>
+                    <div>
+                        <Label>Categories (Drop Zones)</Label>
+                        <div className="space-y-2">
+                            {dndCategories.map((category, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                    <Input value={category} onChange={(e) => handleCategoryChange(index, e.target.value)} placeholder={`Category ${index + 1}`} />
+                                    {dndCategories.length > 1 && (
+                                        <Button variant="ghost" size="icon" onClick={() => removeCategory(index)}>
+                                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        <Button variant="outline" size="sm" className="mt-2" onClick={addCategory}>
+                            <PlusCircle className="mr-2 h-4 w-4"/> Add Category
+                        </Button>
+                    </div>
+                    <div>
+                        <Label>Items to Sort</Label>
+                        <div className="space-y-4">
+                           {dndItems.map((item, index) => (
+                            <Card key={index} className="p-4 bg-muted/50">
+                                <div className="flex justify-between items-center mb-2">
+                                    <p className="font-semibold">Item {index + 1}</p>
+                                     {dndItems.length > 1 && (
+                                        <Button variant="ghost" size="icon" onClick={() => removeItem(index)}>
+                                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                    )}
+                                </div>
+                                <div className="space-y-2">
+                                    <div>
+                                        <Label htmlFor={`item-term-${index}`}>Term</Label>
+                                        <Input id={`item-term-${index}`} value={item.term} onChange={(e) => handleDndItemChange(index, 'term', e.target.value)} />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor={`item-cat-${index}`}>Correct Category</Label>
+                                        <Select value={item.correctCategory} onValueChange={(value) => handleDndItemChange(index, 'correctCategory', value)}>
+                                            <SelectTrigger id={`item-cat-${index}`}>
+                                                <SelectValue placeholder="Select a category" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {dndCategories.filter(c => c.trim()).map(c => (
+                                                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            </Card>
+                           ))}
+                        </div>
+                         <Button variant="outline" size="sm" className="mt-2" onClick={addItem}>
+                            <PlusCircle className="mr-2 h-4 w-4"/> Add Item
+                        </Button>
+                    </div>
+                 </div>
               )}
           </div>
           
