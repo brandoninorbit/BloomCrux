@@ -10,7 +10,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "./ui/button";
-import { Info, Lightbulb, Copy } from "lucide-react";
+import { Info, BrainCircuit, Copy } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 
@@ -57,7 +57,7 @@ export default function CsvImportGuide() {
           <div className="flex justify-between items-center">
             <DialogTitle>CSV Import Formatting Guide</DialogTitle>
              <Button variant="outline" disabled>
-                <Lightbulb className="mr-2 h-4 w-4" />
+                <BrainCircuit className="mr-2 h-4 w-4" />
                 Use AI To Generate
             </Button>
           </div>
