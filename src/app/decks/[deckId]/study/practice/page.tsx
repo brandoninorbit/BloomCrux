@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Target, Check, PartyPopper } from 'lucide-react';
-import type { Deck, CardAttempt, BloomLevel, Flashcard, UserPowerUps, PowerUpType, PurchaseCounts, UserDeckProgress, UserXpStats, StandardMCQCard, Topic } from '@/stitch/types';
+import type { Deck, CardAttempt, BloomLevel, Flashcard, UserPowerUps, PowerUpType, PurchaseCounts, DeckProgress, UserXpStats, StandardMCQCard, Topic } from '@/stitch/types';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
 import { getTopics, getDeckProgress, logCardAttempt, purchasePowerUp, getDeckPurchaseCounts, getUserDeckProgress, getUserXpStats } from '@/lib/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,7 +27,7 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 
 const WEAKNESS_THRESHOLD = 0.8; // 80%
 
-function StudySession({ cards, deck, onExit, initialDeckProgress, isXpBoosted }: { cards: Flashcard[], deck: Deck, onExit: () => void, initialDeckProgress: UserDeckProgress | null, isXpBoosted?: boolean }) {
+function StudySession({ cards, deck, onExit, initialDeckProgress, isXpBoosted }: { cards: Flashcard[], deck: Deck, onExit: () => void, initialDeckProgress: DeckProgress | null, isXpBoosted?: boolean }) {
     const [studyCards, setStudyCards] = useState<Flashcard[]>(() => shuffleArray(cards));
     const [currentCardIndex, setCurrentCardIndex] = useState(0);
     const [isSessionComplete, setIsSessionComplete] = useState(false);
@@ -203,7 +203,7 @@ export default function PracticePage() {
     const [bloomLevels, setBloomLevels] = useState<Record<BloomLevel, { correct: number, total: number }>>({} as any);
     const [isLoading, setIsLoading] = useState(true);
     const [isPracticing, setIsPracticing] = useState(false);
-    const [deckProgress, setDeckProgress] = useState<UserDeckProgress | null>(null);
+    const [deckProgress, setDeckProgress] = useState<DeckProgress | null>(null);
     const [xpStats, setXpStats] = useState<UserXpStats | null>(null);
 
     const fetchPracticeData = useCallback(async () => {
@@ -217,7 +217,7 @@ export default function PracticePage() {
             getUserXpStats(user.uid)
         ]);
         
-        setDeckProgress(progress);
+        setDeckProgress(progress as any);
         setXpStats(stats);
         const foundDeck = topics.flatMap((t: Topic) => t.decks).find((d: Deck) => d.id === deckId);
         

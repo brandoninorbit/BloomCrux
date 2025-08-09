@@ -29,6 +29,9 @@ export async function getUserProgress(uid: string) {
   const g = p?.global ?? {};
 
   const normalized: AppGlobalProgress = {
+    level: Number(g.level ?? 0),
+    xp: Number(g.xp ?? 0),
+    xpToNext: Number(g.xpToNext ?? 0),
     total: typeof g.total === "number" ? g.total : 0,
     reviewed: typeof g.reviewed === "number" ? g.reviewed : 0,
     percent: typeof g.percent === "number" ? g.percent : 0,

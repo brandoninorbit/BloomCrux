@@ -6,7 +6,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import type { Flashcard, StandardMCQCard, CompareContrastCard, DragAndDropSortingCard, FillInTheBlankCard, ShortAnswerCard, TwoTierMCQCard, CERCard, SequencingCard, Topic, Deck, StudyMode, UserDeckProgress, BloomLevel, UserPowerUps, PowerUpType, PurchaseCounts, CardFormat, UserXpStats, UserSettings } from '@/stitch/types';
+import type { Flashcard, StandardMCQCard, CompareContrastCard, DragAndDropSortingCard, FillInTheBlankCard, ShortAnswerCard, TwoTierMCQCard, CERCard, SequencingCard, Topic, Deck, StudyMode, DeckProgress, BloomLevel, UserPowerUps, PowerUpType, PurchaseCounts, CardFormat, UserXpStats, UserSettings } from '@/stitch/types';
 import { Loader2, ArrowLeft, ArrowRight, Check, X, PartyPopper, Lightbulb, History, SkipForward, ShieldAlert, Award } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
@@ -95,7 +95,7 @@ export default function QuestStudyPage() {
   const [purchaseCounts, setPurchaseCounts] = useState<PurchaseCounts>({ 'hint': 0, 'retry': 0, 'fifty-fifty': 0, 'time': 0, 'focus': 0, 'unlock': 0 });
   const [loading, setLoading] = useState(true);
   const [isSessionComplete, setIsSessionComplete] = useState(false);
-  const [deckProgress, setDeckProgress] = useState<UserDeckProgress | null>(null);
+  const [deckProgress, setDeckProgress] = useState<DeckProgress | null>(null);
   const [xpStats, setXpStats] = useState<UserXpStats | null>(null);
   
   // Power-Up State
@@ -151,13 +151,13 @@ export default function QuestStudyPage() {
             }
             
             setDeck(foundDeck);
-            setDeckProgress(progress);
+            setDeckProgress(progress as any);
             setPurchaseCounts(counts);
             setXpStats(stats);
 
             const isNewQuest = searchParams.get('new') === 'true';
             if (isNewQuest && progress) {
-              progress.streak = 0;
+              (progress as any).streak = 0;
               setLevelIndex(0);
               setCardIndex(0);
             }

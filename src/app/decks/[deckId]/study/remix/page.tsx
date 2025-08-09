@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getTopics, logCardAttempt, purchasePowerUp, getDeckPurchaseCounts, saveUserDeckProgress, getUserDeckProgress, getUserXpStats } from "@/lib/firestore";
-import type { Deck, Flashcard, StandardMCQCard, UserPowerUps, PowerUpType, PurchaseCounts, UserDeckProgress, UserXpStats, Topic } from "@/stitch/types";
+import type { Deck, Flashcard, StandardMCQCard, UserPowerUps, PowerUpType, PurchaseCounts, DeckProgress, UserXpStats, Topic } from "@/stitch/types";
 import { useUserAuth } from "@/app/Providers/AuthProvider";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Loader2, PartyPopper } from "lucide-react";
@@ -42,7 +42,7 @@ export default function RemixStudyPage() {
   const [loading, setLoading] = useState(true);
   const [powerUpsExpanded, setPowerUpsExpanded] = useState(false);
   const [isRetryArmed, setIsRetryArmed] = useState(false);
-  const [deckProgress, setDeckProgress] = useState<UserDeckProgress | null>(null);
+  const [deckProgress, setDeckProgress] = useState<DeckProgress | null>(null);
   const [xpStats, setXpStats] = useState<UserXpStats | null>(null);
   const [disabledOptions, setDisabledOptions] = useState<number[]>([]);
 
@@ -72,7 +72,7 @@ export default function RemixStudyPage() {
                 getUserXpStats(user.uid),
                 getDeckPurchaseCounts(user.uid, deckId)
             ]);
-            setDeckProgress(progress);
+            setDeckProgress(progress as any);
             setXpStats(stats);
             setPurchaseCounts(counts);
 
@@ -92,12 +92,12 @@ export default function RemixStudyPage() {
                     setSessionOrder(cardOrder);
                     cardsForSession = cardOrder.map(id => foundDeck.cards.find(c => String(c.id) === id)).filter(Boolean) as Flashcard[];
                     initialIndex = progress.lastCardIndex || 0;
-                    if (progress.streak === 0) {
-                      progress.streak = 0;
+                    if ((progress as any).streak === 0) {
+                      (progress as any).streak = 0;
                     }
                     toast({ title: "Welcome Back!", description: `Resuming your remix mission.` });
                 } else {
-                    if (isNewRemix && progress) progress.streak = 0;
+                    if (isNewRemix && progress) (progress as any).streak = 0;
                     // Start new remix session
                     const shuffledAll = shuffleArray(foundDeck.cards);
                     const missionCards: Flashcard[] = shuffledAll.slice(0, MISSION_LENGTH);

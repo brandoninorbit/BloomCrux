@@ -17,7 +17,7 @@ import type {
   UserPowerUps,
   PowerUpType,
   PurchaseCounts,
-  UserDeckProgress,
+  DeckProgress,
   UserXpStats,
 } from '@/stitch/types';
 import {
@@ -75,7 +75,7 @@ export default function TimedDrillPage() {
   const [purchaseCounts, setPurchaseCounts] = useState<PurchaseCounts>({ 'hint': 0, 'retry': 0, 'fifty-fifty': 0, 'time': 0, 'focus': 0, 'unlock': 0 });
   const [powerUpsExpanded, setPowerUpsExpanded] = useState(false);
   const [isRetryArmed, setIsRetryArmed] = useState(false);
-  const [deckProgress, setDeckProgress] = useState<UserDeckProgress | null>(null);
+  const [deckProgress, setDeckProgress] = useState<DeckProgress | null>(null);
   const [xpStats, setXpStats] = useState<UserXpStats | null>(null);
   const [disabledOptions, setDisabledOptions] = useState<number[]>([]);
 
@@ -132,7 +132,7 @@ export default function TimedDrillPage() {
           getUserXpStats(user.uid)
       ]);
       setPurchaseCounts(counts);
-      setDeckProgress(progress);
+      setDeckProgress(progress as any);
       setXpStats(stats);
       setLoading(false);
     };

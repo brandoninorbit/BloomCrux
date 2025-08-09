@@ -18,7 +18,7 @@ import type {
   UserPowerUps,
   PowerUpType,
   PurchaseCounts,
-  UserDeckProgress,
+  DeckProgress,
   UserXpStats,
   Topic,
 } from '@/stitch/types';
@@ -54,7 +54,7 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 };
 
 
-function StarredStudySession({ cards, deck, onExit, initialDeckProgress, isXpBoosted }: { cards: Flashcard[], deck: Deck, onExit: () => void, initialDeckProgress: UserDeckProgress | null, isXpBoosted?: boolean }) {
+function StarredStudySession({ cards, deck, onExit, initialDeckProgress, isXpBoosted }: { cards: Flashcard[], deck: Deck, onExit: () => void, initialDeckProgress: DeckProgress | null, isXpBoosted?: boolean }) {
     const [studyCards, setStudyCards] = useState<Flashcard[]>(() => shuffleArray(cards));
     const [currentCardIndex, setCurrentCardIndex] = useState(0);
     const [isSessionComplete, setIsSessionComplete] = useState(false);
@@ -228,7 +228,7 @@ export default function StarredPage() {
     const [deck, setDeck] = useState<Deck | null>(null);
     const [starredCards, setStarredCards] = useState<Flashcard[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [deckProgress, setDeckProgress] = useState<UserDeckProgress | null>(null);
+    const [deckProgress, setDeckProgress] = useState<DeckProgress | null>(null);
     const [xpStats, setXpStats] = useState<UserXpStats | null>(null);
 
     useEffect(() => {
@@ -242,7 +242,7 @@ export default function StarredPage() {
                 getUserXpStats(user.uid)
             ]);
 
-            setDeckProgress(progress);
+            setDeckProgress(progress as any);
             setXpStats(stats);
             const foundDeck = topics.flatMap((t: Topic) => t.decks).find((d: Deck) => d.id === deckId);
 
