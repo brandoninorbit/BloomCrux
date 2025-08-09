@@ -135,7 +135,7 @@ export default function DecksPage() {
 
   return (
     <main className="py-8 relative">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <div className="space-y-8">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-semibold">{heading}</h2>
