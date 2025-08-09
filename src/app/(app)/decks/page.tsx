@@ -38,16 +38,15 @@ export default function DecksPage() {
 
   // Load folders list (for the “Folders” section)
   useEffect(() => {
-    if (!user) return;
     (async () => {
       const snap = await getDocs(query(collection(db, "folders"), where("ownerUid", "==", uid)));
       setFolders(snap.docs.map(d => ({ id: d.id, ...(d.data() as Folder) })));
     })();
-  }, [uid, user]);
+  }, [uid]);
 
   // Load recent decks on first paint or when returning to Recent
   useEffect(() => {
-    if (mode.kind !== "recent" || recent || !user) return;
+    if (mode.kind !== "recent" || recent) return;
     (async () => {
       setLoading(true);
       const snap = await getDocs(
@@ -61,11 +60,11 @@ export default function DecksPage() {
       setRecent(snap.docs.map(d => ({ id: d.id, ...(d.data() as Deck) })));
       setLoading(false);
     })();
-  }, [mode, recent, uid, user]);
+  }, [mode, recent, uid]);
 
   // Load folder decks when a folder mode is set
   useEffect(() => {
-    if (mode.kind !== "folder" || !user) return;
+    if (mode.kind !== "folder") return;
     (async () => {
       setLoading(true);
 
@@ -81,7 +80,7 @@ export default function DecksPage() {
       setMode({ kind: "folder", folderId: mode.folderId, folderName, count });
       setLoading(false);
     })();
-  }, [mode, uid, user]);
+  }, [mode.kind, uid]);
 
   // keep URL synced with view (optional but nice)
   useEffect(() => {
