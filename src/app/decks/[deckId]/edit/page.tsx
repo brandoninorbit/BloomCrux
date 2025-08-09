@@ -30,6 +30,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import CreateCardDialog from '@/components/CreateCardDialog';
 
 // CSV PARSING HELPERS
 const stripBOM = (s: string) => s.replace(/^\uFEFF/, '');
@@ -314,6 +315,7 @@ export default function EditDeckPage() {
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [cardsLoaded, setCardsLoaded] = useState(false);
   const [isCardsLoading, setIsCardsLoading] = useState(false);
+  const [isCreateCardOpen, setIsCreateCardOpen] = useState(false);
   
   // State for imported cards
   const [newlyImportedCards, setNewlyImportedCards] = useState<Flashcard[]>([]);
@@ -571,6 +573,14 @@ export default function EditDeckPage() {
     setSourceToDelete(null); // Close dialog
   }
 
+  const handleAddCard = (newCard: Flashcard) => {
+    setCards(prev => [newCard, ...prev]);
+    setIsCreateCardOpen(false); // Close dialog on save
+    if (!cardsLoaded) {
+      handleLoadCards(); // Show cards if list was hidden
+    }
+  };
+
   const groupedCards = useMemo(() => {
     const norm = (s?: string | null) => (s ?? '').trim();
     const bloomTitle = (raw?: string) => {
@@ -771,6 +781,12 @@ export default function EditDeckPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CreateCardDialog
+        open={isCreateCardOpen}
+        onOpenChange={setIsCreateCardOpen}
+        onSave={handleAddCard}
+      />
       
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Edit Deck</h1>
@@ -815,7 +831,7 @@ export default function EditDeckPage() {
                 <CardTitle>Deck Actions</CardTitle>
             </CardHeader>
             <CardContent className="flex items-center gap-4">
-                <Button>
+                <Button onClick={() => setIsCreateCardOpen(true)}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Add Card
                 </Button>
