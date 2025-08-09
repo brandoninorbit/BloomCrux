@@ -2,11 +2,12 @@
 "use client";
 
 import Link from "next/link";
-import type { Deck as StitchDeck } from '@/stitch/types';
+import type { Deck as StitchDeck, DeckSummary } from '@/stitch/types';
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 
-export function DeckGrid({ decks }: { decks: StitchDeck[] }) {
+// The component now accepts DeckSummary to match the client
+export function DeckGrid({ decks }: { decks: (StitchDeck | DeckSummary)[] }) {
   const handleDelete = (deckId: string) => {
     // Placeholder for delete functionality
     alert(`Delete action for deck ${deckId}`);
@@ -21,7 +22,8 @@ export function DeckGrid({ decks }: { decks: StitchDeck[] }) {
         >
           <div className="relative w-full aspect-[3/4] bg-white rounded-xl shadow-md transition-all duration-500 group-hover:shadow-xl group-hover:-translate-y-2 flex flex-col justify-between">
             <Link href={`/decks/${d.id}/study`} className="flex-grow flex flex-col justify-center items-center p-4 text-center" prefetch={false}>
-              <p className="text-lg font-semibold text-center text-gray-700">{d.title}</p>
+              {/* FIX: Use `d.title` for StitchDeck and `d.name` for DeckSummary */}
+              <p className="text-lg font-semibold text-center text-gray-700">{'title' in d ? d.title : d.name}</p>
             </Link>
             <div className="flex items-center justify-end p-2 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity">
                <Link href={`/decks/${d.id}/edit`} passHref>
