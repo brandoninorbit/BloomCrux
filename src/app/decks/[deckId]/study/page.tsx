@@ -1,4 +1,5 @@
 
+
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -25,7 +26,8 @@ const MOCK_PROGRESS: UserDeckProgress = {
     xp: 50,
     xpToNext: 150,
     lastCardIndex: 0,
-    mode: 'quest'
+    mode: 'quest',
+    streak: 0,
 };
 
 
@@ -134,7 +136,7 @@ export default function StudyHubPage() {
                             </>
                         ) : (
                             <Button className="w-full" asChild>
-                                <Link href={`/decks/${deckId}/study/quest?new=true`}>Begin Mission</Link>
+                                <Link href={`/decks/${deckId}/study/quest`}>Begin Mission</Link>
                             </Button>
                         )}
                     </MissionCard>
@@ -145,11 +147,11 @@ export default function StudyHubPage() {
                     >
                          {hasStartedRemix ? (
                              <Button className="w-full" asChild>
-                                <Link href={`/decks/${deckId}/study/remix`}>Continue Mission</Link>
+                                <Link href={`/decks/${deckId}/study/random-remix`}>Continue Mission</Link>
                             </Button>
                          ) : (
                              <Button className="w-full" asChild>
-                                <Link href={`/decks/${deckId}/study/remix?new=true`}>Begin Mission</Link>
+                                <Link href={`/decks/${deckId}/study/random-remix`}>Begin Mission</Link>
                             </Button>
                          )}
                     </MissionCard>

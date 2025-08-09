@@ -1,6 +1,7 @@
 
 
 
+
 import { 
   getUserProgress as _getUserProgress,
   getTopics as _getTopics,
@@ -23,7 +24,7 @@ import {
 
 import type { GlobalProgress as AppGlobalProgress, SelectedCustomizations, BloomLevel, Flashcard } from "@/types";
 import type { Topic as StitchTopic, UserDeckProgress } from "@/stitch/types";
-import { onSnapshot, query, collection, where, doc, getDocs } from "firebase/firestore";
+import { onSnapshot, query, collection, where, doc, getDocs, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase"; // make sure this path is correct
 
 /** Fix: typed wrapper so global always matches our app's type */
@@ -80,6 +81,19 @@ export async function getCardsForDeckByBloomLevel(uid: string, deckId: string, l
     const cardsSnap = await getDocs(cardsQuery);
     return cardsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Flashcard));
 }
+
+/**
+ * Fetches all cards for a specific deck.
+ * @param uid The user's ID.
+ * @param deckId The deck's ID.
+ * @returns A promise that resolves to an array of all Flashcard objects in the deck.
+ */
+export async function getAllCardsForDeck(uid: string, deckId: string): Promise<Flashcard[]> {
+    const cardsColRef = collection(db, 'userTopics', uid, 'decks', deckId, 'cards');
+    const cardsSnap = await getDocs(cardsColRef);
+    return cardsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Flashcard));
+}
+
 
 /**
  * Fetches a single card by its ID from within a deck's subcollection.
