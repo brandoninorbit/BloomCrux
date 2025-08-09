@@ -9,9 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
-import type { Deck } from '@/stitch/types';
+import type { Deck, Flashcard } from '@/stitch/types';
 import { getDeck, saveDeck } from '@/lib/firestore';
-import { Loader2, PlusCircle, Star, Upload, Info, Trash2 } from 'lucide-react';
+import { Loader2, PlusCircle, Star, Upload, Info, Trash2, FileText, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { MOCK_DECKS_BY_FOLDER, MOCK_DECKS_RECENT } from '@/mock/decks';
@@ -28,19 +28,26 @@ export default function EditDeckPage() {
   const [description, setDescription] = useState('');
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, setIsSaving] =useState(false);
+
+  // State for lazy loading cards
+  const [cards, setCards] = useState<Flashcard[]>([]);
+  const [cardsLoaded, setCardsLoaded] = useState(false);
+  const [isCardsLoading, setIsCardsLoading] = useState(false);
 
   useEffect(() => {
     const fetchDeckData = async () => {
       setLoading(true);
       if (user) {
-        // User is logged in, fetch from Firestore
         try {
+          // Fetch deck but initially without cards
           const fetchedDeck = await getDeck(user.uid, deckId);
           if (fetchedDeck) {
-            setDeck(fetchedDeck);
-            setTitle(fetchedDeck.title);
-            setDescription(fetchedDeck.description);
+            const { cards: fetchedCards, ...deckData } = fetchedDeck;
+            setDeck(deckData); // Set deck metadata
+            setCards(fetchedCards); // Store cards separately
+            setTitle(deckData.title);
+            setDescription(deckData.description);
           } else {
             toast({
               variant: "destructive",
@@ -60,11 +67,11 @@ export default function EditDeckPage() {
           setLoading(false);
         }
       } else {
-        // User is not logged in, use mock data immediately
         const allMocks = [...MOCK_DECKS_RECENT, ...Object.values(MOCK_DECKS_BY_FOLDER).flat()];
         const mockDeck = allMocks.find(d => d.id === deckId);
         if (mockDeck) {
             setDeck(mockDeck);
+            setCards(mockDeck.cards);
             setTitle(mockDeck.title);
             setDescription(mockDeck.description);
         } else {
@@ -97,7 +104,7 @@ export default function EditDeckPage() {
     }
     setIsSaving(true);
     try {
-        const updatedDeck: Deck = { ...deck, title, description };
+        const updatedDeck: Deck = { ...deck, title, description, cards };
         await saveDeck(user.uid, updatedDeck);
         toast({
             title: "Success!",
@@ -115,8 +122,19 @@ export default function EditDeckPage() {
         setIsSaving(false);
     }
   };
+
+  const handleLoadCards = () => {
+    // In a real scenario, this would fetch cards if they weren't fetched initially.
+    // For now, it just reveals the cards already in state.
+    setIsCardsLoading(true);
+    setTimeout(() => {
+        setCardsLoaded(true);
+        setIsCardsLoading(false);
+    }, 500); // Simulate network delay
+  }
   
-  const starredCount = deck?.cards.filter(c => c.isStarred).length || 0;
+  const starredCount = cards.filter(c => c.isStarred).length || 0;
+  const mockSources = ["questions_batch1_fixed.csv", "questions_batch2_fixed.csv", "questions_batch3_fixed.csv"];
 
   if (loading) {
     return (
@@ -173,9 +191,7 @@ export default function EditDeckPage() {
             </div>
           </CardContent>
         </Card>
-
-        <h2 className="text-2xl font-bold">Cards in this Deck</h2>
-
+        
         <Card>
             <CardHeader>
                 <CardTitle>Deck Actions</CardTitle>
@@ -222,6 +238,55 @@ export default function EditDeckPage() {
                 </div>
             </CardContent>
         </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Deck Sources</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+                <p className="text-sm text-muted-foreground">This deck contains cards imported from the following files.</p>
+                {mockSources.map((source, index) => (
+                    <div key={index} className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
+                        <div className="flex items-center gap-2">
+                            <FileText className="h-5 w-5" />
+                            <span className="font-medium">{source}</span>
+                        </div>
+                        <Button variant="ghost" size="icon">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                ))}
+            </CardContent>
+        </Card>
+
+        <h2 className="text-2xl font-bold">Cards in this Deck</h2>
+        
+        {!cardsLoaded ? (
+            <Card className="text-center">
+                <CardContent className="p-6">
+                     <Button onClick={handleLoadCards} disabled={isCardsLoading}>
+                        {isCardsLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Load Cards ({cards.length})
+                    </Button>
+                </CardContent>
+            </Card>
+        ) : (
+            cards.map(card => (
+                 <Card key={card.id}>
+                    <CardContent className="p-4 flex justify-between items-center">
+                        <div>
+                            <p className="font-semibold">{card.questionStem}</p>
+                            <p className="text-sm text-muted-foreground">{card.cardFormat}</p>
+                        </div>
+                        <div className="flex gap-1">
+                            <Button variant="ghost" size="icon"><Star className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            ))
+        )}
 
       </div>
     </main>

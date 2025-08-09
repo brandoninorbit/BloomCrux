@@ -134,6 +134,7 @@ export type Deck = {
     cards: Flashcard[];
     isMastered?: boolean;
     totalCards?: number; // Add this to align with progress object
+    sources?: string[];
 };
 
 export type Topic = {
