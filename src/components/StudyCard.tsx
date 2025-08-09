@@ -146,7 +146,7 @@ export function StudyCard({ card, onLogAttempt, onNextCard, isAnswered: external
         setShowFeedback(true);
         onLogAttempt(card, true);
     } else {
-        handleIncorrectAnswer();
+        setIsAnswerChecked(true); // show feedback even if wrong
     }
   }
   
@@ -266,7 +266,7 @@ export function StudyCard({ card, onLogAttempt, onNextCard, isAnswered: external
                       "p-5 text-left rounded-xl border-2 transition-all duration-200",
                       isAnswered && isCorrectOption ? "border-green-400 bg-green-50"
                       : isAnswered && isSelectedOption && !isCorrectOption ? "border-red-400 bg-red-50"
-                      : "bg-white border-gray-200 hover:border-indigo-500 hover:bg-indigo-50"
+                      : "bg-white border-gray-200 hover:border-primary hover:bg-primary/10"
                     )}
                     disabled={isAnswered || isDisabled}
                     animate={isDisabled ? { opacity: 0.4, scale: 0.95 } : { opacity: 1, scale: 1 }}
@@ -316,7 +316,7 @@ export function StudyCard({ card, onLogAttempt, onNextCard, isAnswered: external
                 )}
                  {!isAnswered && <Button onClick={handleCheckTextAnswer}>Check Answer</Button>}
                  
-                 {isAnswered && !isCorrect && (
+                 {isAnswerChecked && (
                     <div className="space-y-4">
                         <Card className="w-full max-w-md mx-auto bg-muted/50 p-4">
                             <CardHeader className="p-0 text-left">
