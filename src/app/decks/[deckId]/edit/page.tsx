@@ -340,48 +340,83 @@ export default function EditDeckPage() {
   }
 
   const groupedCards = useMemo(() => {
-    if (sortOrder === 'Default' || !cards) {
-        return { 'Default': cards || [] };
-    }
+    if (!cards) return { Default: [] as Flashcard[] };
+    if (sortOrder === 'Default') return { Default: cards };
+
+    // Normalize helpers
+    const bloomTitle = (s?: string) => {
+        if (!s) return 'Uncategorized';
+        const x = s.toLowerCase();
+        const map: Record<string, BloomLevel> = {
+        remember: 'Remember',
+        understand: 'Understand',
+        apply: 'Apply',
+        analyze: 'Analyze',
+        evaluate: 'Evaluate',
+        create: 'Create',
+        };
+        return (map[x] ?? 'Uncategorized') as BloomLevel | 'Uncategorized';
+    };
+
+    const trimStr = (s?: string | null) =>
+        (s ?? '').toString().trim();
 
     const getGroupKey = (card: Flashcard): string => {
-        if (sortOrder === 'Bloom\'s Level') {
-            return card.bloomLevel || 'Uncategorized';
+        if (sortOrder === "Bloom's Level") return bloomTitle(card.bloomLevel);
+        if (sortOrder === 'Card Format') return trimStr(card.cardFormat) || 'Uncategorized';
+        if (sortOrder === 'Source') {
+        // If you later add card.source, this will neatly group by it
+        return trimStr((card as any).source) || 'Unknown Source';
         }
-        if (sortOrder === 'Card Format') {
-            return card.cardFormat || 'Uncategorized';
-        }
-        // Add other sort criteria here if needed
         return 'Uncategorized';
     };
 
+    // Group
     const grouped = cards.reduce((acc, card) => {
         const key = getGroupKey(card);
-        if (!acc[key]) {
-            acc[key] = [];
-        }
-        acc[key].push(card);
+        (acc[key] ||= []).push(card);
         return acc;
     }, {} as Record<string, Flashcard[]>);
 
-    // If sorting by Bloom's Level, ensure the groups are in the correct order
-    if (sortOrder === 'Bloom\'s Level') {
-        const bloomOrder: BloomLevel[] = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'];
-        const orderedGroups: Record<string, Flashcard[]> = {};
-        bloomOrder.forEach(level => {
-            if (grouped[level]) {
-                orderedGroups[level] = grouped[level];
-            }
+    // Sort items within each group (by questionStem asc, then id)
+    const sortCardsInPlace = (arr: Flashcard[]) =>
+        arr.sort((a, b) => {
+        const A = trimStr(a.questionStem).toLowerCase();
+        const B = trimStr(b.questionStem).toLowerCase();
+        if (A < B) return  -1;
+        if (A > B) return  1;
+        return trimStr(a.id).localeCompare(trimStr(b.id));
         });
-         // Add any remaining groups (like 'Uncategorized')
-        for (const key in grouped) {
-            if (!orderedGroups[key]) {
-                orderedGroups[key] = grouped[key];
-            }
+
+    // Order the groups
+    if (sortOrder === "Bloom's Level") {
+        const bloomOrder: (BloomLevel | 'Uncategorized')[] = [
+        'Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create', 'Uncategorized'
+        ];
+        const ordered: Record<string, Flashcard[]> = {};
+        for (const key of bloomOrder) {
+        if (grouped[key]) {
+            ordered[key] = sortCardsInPlace(grouped[key]);
         }
-        return orderedGroups;
+        }
+        // Any unexpected keys go after
+        Object.keys(grouped).forEach(k => {
+        if (!(k in ordered)) ordered[k] = sortCardsInPlace(grouped[k]);
+        });
+        return ordered;
     }
 
+    if (sortOrder === 'Card Format' || sortOrder === 'Source') {
+        const ordered: Record<string, Flashcard[]> = {};
+        const keys = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
+        for (const k of keys) {
+        ordered[k] = sortCardsInPlace(grouped[k]);
+        }
+        return ordered;
+    }
+
+    // Fallback
+    Object.values(grouped).forEach(sortCardsInPlace);
     return grouped;
   }, [cards, sortOrder]);
   
