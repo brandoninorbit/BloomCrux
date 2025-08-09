@@ -15,12 +15,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { Flashcard, StandardMCQCard, CardFormat, FillInTheBlankCard, ShortAnswerCard, BloomLevel, CompareContrastCard, DragAndDropSortingCard, DndItem, SequencingCard } from '@/stitch/types';
+import type { Flashcard, StandardMCQCard, CardFormat, FillInTheBlankCard, ShortAnswerCard, BloomLevel, CompareContrastCard, DragAndDropSortingCard, DndItem, SequencingCard, TwoTierMCQCard } from '@/stitch/types';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Info, PlusCircle, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Separator } from './ui/separator';
 
 interface CreateCardDialogProps {
   open: boolean;
@@ -54,6 +55,14 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
   const [options, setOptions] = useState(['', '', '', '']);
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState(0);
   const [explanation, setExplanation] = useState('');
+
+  // Two-Tier MCQ State
+  const [tier1Question, setTier1Question] = useState('');
+  const [tier1Options, setTier1Options] = useState(['', '', '', '']);
+  const [tier1CorrectIndex, setTier1CorrectIndex] = useState(0);
+  const [tier2Question, setTier2Question] = useState('');
+  const [tier2Options, setTier2Options] = useState(['', '', '', '']);
+  const [tier2CorrectIndex, setTier2CorrectIndex] = useState(0);
 
   // Text-based State
   const [prompt, setPrompt] = useState('');
@@ -95,6 +104,12 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
     setDndItems([{ term: '', correctCategory: '' }]);
     setSequencingPrompt('');
     setSequenceItems(['']);
+    setTier1Question('');
+    setTier1Options(['', '', '', '']);
+    setTier1CorrectIndex(0);
+    setTier2Question('');
+    setTier2Options(['', '', '', '']);
+    setTier2CorrectIndex(0);
   };
 
   const handleSave = () => {
@@ -119,6 +134,30 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
                 distractorRationale: { explanation },
                 },
             } as StandardMCQCard;
+            break;
+        
+        case 'Two-Tier MCQ':
+            if (!tier1Question.trim() || tier1Options.some(opt => !opt.trim()) || !tier2Question.trim() || tier2Options.some(opt => !opt.trim())) {
+                alert('Please fill in all fields for both tiers of the Two-Tier MCQ card.');
+                return;
+            }
+            newCard = {
+                id: crypto.randomUUID(),
+                cardFormat: 'Two-Tier MCQ',
+                questionStem: tier1Question,
+                topic: 'Manual',
+                bloomLevel,
+                tier1: {
+                    question: tier1Question,
+                    options: tier1Options,
+                    correctAnswerIndex: tier1CorrectIndex,
+                },
+                tier2: {
+                    question: tier2Question,
+                    options: tier2Options,
+                    correctAnswerIndex: tier2CorrectIndex,
+                }
+            } as TwoTierMCQCard;
             break;
 
         case 'Fill in the Blank':
@@ -220,6 +259,18 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
     setOptions(newOptions);
   };
   
+  const handleTier1OptionChange = (index: number, value: string) => {
+    const newOptions = [...tier1Options];
+    newOptions[index] = value;
+    setTier1Options(newOptions);
+  };
+  
+  const handleTier2OptionChange = (index: number, value: string) => {
+    const newOptions = [...tier2Options];
+    newOptions[index] = value;
+    setTier2Options(newOptions);
+  };
+
   const handlePairChange = (index: number, field: 'feature' | 'pointA' | 'pointB', value: string) => {
     const newPairs = [...comparisonPairs];
     newPairs[index][field] = value;
@@ -281,7 +332,9 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
             Select a card type and fill in the details. Click save when you're done.
           </DialogDescription>
         </DialogHeader>
-        <div className={cn("grid gap-4 py-4", (cardType === 'Compare/Contrast' || cardType === 'Drag and Drop Sorting') && "grid-cols-2")}>
+        <div className={cn("grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-4", 
+            (cardType === 'Compare/Contrast' || cardType === 'Drag and Drop Sorting') && "grid-cols-2"
+        )}>
           <div className={cn("space-y-4", (cardType === 'Compare/Contrast' || cardType === 'Drag and Drop Sorting') && "pr-8 border-r")}>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="question-type" className="text-right">
@@ -307,12 +360,12 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
                       <SelectItem value="Compare/Contrast">Compare/Contrast</SelectItem>
                       <SelectItem value="Drag and Drop Sorting">Drag & Drop Sorting</SelectItem>
                       <SelectItem value="Sequencing">Sequencing</SelectItem>
+                      <SelectItem value="Two-Tier MCQ">Two-Tier MCQ</SelectItem>
                     </SelectGroup>
                     <SelectGroup>
                       <SelectLabel className="flex items-center gap-2">
                         <span className="text-lg">🧪</span> Evaluate / Create
                       </SelectLabel>
-                      <SelectItem value="Two-Tier MCQ" disabled>Two-Tier MCQ</SelectItem>
                       <SelectItem value="CER" disabled>Claim-Evidence-Reasoning</SelectItem>
                     </SelectGroup>
                   </SelectContent>
@@ -390,6 +443,66 @@ export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateC
                     />
                   </div>
                 </>
+              )}
+
+              {cardType === 'Two-Tier MCQ' && (
+                <div className="space-y-4">
+                  <h3 className="text-base font-semibold text-primary col-span-4">Tier 1: Content Question</h3>
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="t1-question" className="text-right pt-2">Question</Label>
+                    <Textarea id="t1-question" value={tier1Question} onChange={e => setTier1Question(e.target.value)} className="col-span-3" />
+                  </div>
+                  {tier1Options.map((option, index) => (
+                    <div key={index} className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor={`t1-option-${index}`} className="text-right">Option {String.fromCharCode(65 + index)}</Label>
+                      <Input id={`t1-option-${index}`} value={option} onChange={e => handleTier1OptionChange(index, e.target.value)} className="col-span-3" />
+                    </div>
+                  ))}
+                   <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="t1-correct-answer" className="text-right">Correct Answer</Label>
+                    <Select value={String(tier1CorrectIndex)} onValueChange={(v) => setTier1CorrectIndex(Number(v))}>
+                      <SelectTrigger id="t1-correct-answer" className="col-span-3">
+                        <SelectValue placeholder="Select the correct answer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tier1Options.map((opt, i) => (
+                          <SelectItem key={i} value={String(i)} disabled={!opt.trim()}>
+                            Option {String.fromCharCode(65 + i)}: {opt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Separator className="my-6" />
+
+                  <h3 className="text-base font-semibold text-primary col-span-4">Tier 2: Reasoning Question</h3>
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="t2-question" className="text-right pt-2">Question</Label>
+                    <Textarea id="t2-question" value={tier2Question} onChange={e => setTier2Question(e.target.value)} className="col-span-3" placeholder="e.g., Which statement best supports your answer?" />
+                  </div>
+                  {tier2Options.map((option, index) => (
+                    <div key={index} className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor={`t2-option-${index}`} className="text-right">Option {String.fromCharCode(65 + index)}</Label>
+                      <Input id={`t2-option-${index}`} value={option} onChange={e => handleTier2OptionChange(index, e.target.value)} className="col-span-3" />
+                    </div>
+                  ))}
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="t2-correct-answer" className="text-right">Correct Answer</Label>
+                    <Select value={String(tier2CorrectIndex)} onValueChange={(v) => setTier2CorrectIndex(Number(v))}>
+                      <SelectTrigger id="t2-correct-answer" className="col-span-3">
+                        <SelectValue placeholder="Select the correct answer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tier2Options.map((opt, i) => (
+                          <SelectItem key={i} value={String(i)} disabled={!opt.trim()}>
+                            Option {String.fromCharCode(65 + i)}: {opt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               )}
 
               {cardType === 'Fill in the Blank' && (
