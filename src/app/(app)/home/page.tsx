@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -51,6 +52,7 @@ export default function HomePage() {
         setUserDecks([]);
       }
       
+      // This logic must be inside useEffect to run only on the client
       const storedInteractions = localStorage.getItem('biocrux-interactions');
       if (storedInteractions && Object.keys(JSON.parse(storedInteractions)).length > 0) {
         setHasReviewHistory(true);
