@@ -385,7 +385,27 @@ export default function EditDeckPage() {
         return;
       }
       
-      // Real data path for logged-in users
+      const isNewDeck = deckId.startsWith('new_');
+      
+      if (isNewDeck) {
+        // This is a new, unsaved deck. Create a default structure.
+        const newDeck: Deck = {
+          id: deckId,
+          title: 'Untitled Deck',
+          description: '',
+          cards: [],
+          sources: [],
+        };
+        setDeck(newDeck);
+        setTitle(newDeck.title);
+        setDescription(newDeck.description);
+        setCards([]);
+        setDeckSources([]);
+        setLoading(false);
+        return;
+      }
+
+      // Real data path for existing decks
       try {
         const fetchedDeck = await getDeck(user.uid, deckId);
         if (fetchedDeck) {
@@ -904,5 +924,7 @@ export default function EditDeckPage() {
     </main>
   );
 }
+
+    
 
     
