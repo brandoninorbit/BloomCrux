@@ -5,6 +5,8 @@ export type RecallLevel = 'easy' | 'medium' | 'hard';
 export type CardFormat = 'text' | 'code' | 'Standard MCQ' | 'Two-Tier MCQ' | 'Fill in the Blank' | 'Short Answer' | 'Drag and Drop Sorting' | 'Sequencing' | 'Compare/Contrast' | 'CER' | 'other';
 export type BloomLevel = 'Remember' | 'Understand' | 'Apply' | 'Analyze' | 'Evaluate' | 'Create';
 export type DOKLevel = 1 | 2 | 3 | 4;
+export type FolderColor =
+  | "blue" | "green" | "yellow" | "purple" | "pink" | "orange" | "gray";
 
 export interface BaseCard {
     id: string; // Changed from number to string for consistency
@@ -145,7 +147,7 @@ export type Topic = {
 
 export interface DeckSummary {
   id: string;
-  name: string;         // required for UI cards
+  name: string;
   updatedAt?: string | number | Date | null;
   folderId?: string | null;
 }
@@ -154,6 +156,8 @@ export interface FolderSummary {
   id: string;
   name: string;
   setCount?: number;
+  color?: FolderColor;
+  updatedAt?: string | number | Date | null;
 }
 
 

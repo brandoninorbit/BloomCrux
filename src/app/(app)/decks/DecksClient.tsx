@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Pencil } from "lucide-react";
 import { DeckGrid } from "@/components/DeckGrid";
 import Link from "next/link";
+import { EditFolderDialog } from "@/components/folders/EditFolderDialog";
 
 
 /** Local, file-scoped mocks (used only when logged out) */
@@ -19,44 +20,46 @@ const MOCK_DECKS: DeckSummary[] = [
   { id: "m4", name: "Organic Chemistry" },
 ];
 const MOCK_FOLDERS: FolderSummary[] = [
-  { id: "f1", name: "Science", setCount: 12 },
-  { id: "f2", name: "Languages", setCount: 8 },
-  { id: "f3", name: "Humanities", setCount: 4 },
+  { id: "f1", name: "Science", setCount: 12, color: 'blue' },
+  { id: "f2", name: "Languages", setCount: 8, color: 'green' },
+  { id: "f3", name: "Humanities", setCount: 4, color: 'yellow' },
 ];
 
 
-function FolderCard({
-  name,
-  sets,
-  color = "bg-blue-100 text-blue-600",
-  onClick,
-}: {
-  name: string;
-  sets: number;
-  color?: string;
-  onClick?: () => void;
-}) {
+function colorToClass(color: string = "blue") {
+  switch (color) {
+    case "green": return "bg-green-100 text-green-600";
+    case "yellow": return "bg-yellow-100 text-yellow-600";
+    case "purple": return "bg-purple-100 text-purple-600";
+    case "pink": return "bg-pink-100 text-pink-600";
+    case "orange": return "bg-orange-100 text-orange-600";
+    case "gray": return "bg-gray-100 text-gray-600";
+    case "blue":
+    default: return "bg-blue-100 text-blue-600";
+  }
+}
+
+function FolderCard({ folder, onEdit }: { folder: FolderSummary, onEdit: () => void }) {
   return (
     <div
       className="group w-full text-left bg-white rounded-2xl shadow-md p-5 flex items-center gap-5
                  hover:shadow-lg hover:-translate-y-1 transition-transform duration-300 focus:outline-none
                  focus-visible:ring-2 focus-visible:ring-primary/40"
     >
-      <button
-        onClick={onClick}
+      <div
         className={`w-12 h-12 rounded-lg flex items-center justify-center 
-                    ${color}`}
+                    ${colorToClass(folder.color)}`}
       >
         <svg className="h-6 w-6" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" fill="none">
           <path d="M4 11h16v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7z" />
           <path d="M8 11V8a4 4 0 1 1 8 0v3" />
         </svg>
-      </button>
-      <div className="flex-grow">
-        <p className="font-semibold">{name}</p>
-        <p className="text-sm text-muted-foreground">{sets} sets</p>
       </div>
-      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 hover:bg-blue-100 hover:text-blue-600">
+      <div className="flex-grow">
+        <p className="font-semibold">{folder.name}</p>
+        <p className="text-sm text-muted-foreground">{folder.setCount || 0} sets</p>
+      </div>
+      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 hover:bg-blue-100 hover:text-blue-600" onClick={onEdit}>
         <Pencil className="h-4 w-4" />
       </Button>
     </div>
@@ -78,6 +81,7 @@ export default function DecksClient() {
   const { user } = useUserAuth(); // null when logged out
   const [decks, setDecks] = useState<DeckSummary[] | null>(null);   // null = loading
   const [folders, setFolders] = useState<FolderSummary[] | null>(null);
+  const [editingFolder, setEditingFolder] = useState<FolderSummary | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -96,6 +100,12 @@ export default function DecksClient() {
       setDecks(d); setFolders(f);
     })();
   }, [user]);
+
+  const handleUpdateFolder = (updatedFolder: FolderSummary) => {
+    setFolders(currentFolders => 
+        (currentFolders ?? []).map(f => f.id === updatedFolder.id ? updatedFolder : f)
+    );
+  };
 
   const loading = user && (decks === null || folders === null);
 
@@ -118,9 +128,9 @@ export default function DecksClient() {
               {loading ? (
                 <SkeletonRow />
               ) : decks && decks.length > 0 ? (
-                <DeckGrid decks={decks as any} />
+                <DeckGrid decks={decks} />
               ) : (
-                <p className="text-muted-foreground">No recent decks.</p>
+                <p className="text-muted-foreground">{user ? "No recent decks." : ""}</p>
               )}
             </section>
 
@@ -133,19 +143,30 @@ export default function DecksClient() {
                     {folders.map((f) => (
                       <FolderCard
                         key={f.id}
-                        name={f.name}
-                        sets={f.setCount || 0}
+                        folder={f}
+                        onEdit={() => setEditingFolder(f)}
                       />
                     ))}
                   </div>
               ) : (
-                <p className="text-muted-foreground">No folders created yet.</p>
+                <p className="text-muted-foreground">{user ? "No folders created yet." : ""}</p>
               )}
             </section>
 
           </div>
         </div>
       </div>
+      {editingFolder && (
+        <EditFolderDialog
+          folder={editingFolder}
+          open={!!editingFolder}
+          onOpenChange={(isOpen) => !isOpen && setEditingFolder(null)}
+          onUpdated={(updated) => {
+            handleUpdateFolder(updated);
+            setEditingFolder(updated); // Keep dialog open with new data
+          }}
+        />
+      )}
     </main>
   );
 }
