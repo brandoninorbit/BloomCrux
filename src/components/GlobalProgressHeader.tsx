@@ -2,7 +2,7 @@
 
 'use client';
 import { motion } from "framer-motion";
-import type { GlobalProgress, UserXpStats } from "@/types";
+import type { GlobalProgress, UserXpStats } from "@/stitch/types";
 import { cn } from "@/lib/utils";
 import { Progress } from "./ui/progress";
 import { Loader2 } from "lucide-react";
@@ -74,5 +74,3 @@ const pct = Math.round((gxp / Math.max(1, gnext)) * 100);
     </header>
   );
 }
-
-

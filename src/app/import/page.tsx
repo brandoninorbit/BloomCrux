@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import type { Flashcard } from '@/types';
+import type { Flashcard } from '@/stitch/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Stub function for the actual import logic
@@ -85,5 +85,3 @@ export default function ImportPage() {
     </main>
   );
 }
-
-

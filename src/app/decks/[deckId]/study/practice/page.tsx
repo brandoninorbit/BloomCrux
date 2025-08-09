@@ -179,7 +179,7 @@ function StudySession({ cards, deck, onExit, initialDeckProgress, isXpBoosted }:
                             card={currentCard}
                             onLogAttempt={handleLogAttempt}
                             onNextCard={goToNextCard}
-                            deckId={deck.id}
+                            deckId={String(deck.id)}
                             isRetryArmed={isRetryArmed}
                             onUseRetry={() => setIsRetryArmed(false)}
                             isXpBoosted={isXpBoosted}

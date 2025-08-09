@@ -176,5 +176,3 @@ function DeckGrid({ decks }: { decks: StitchDeck[] }) {
     </div>
   );
 }
-
-    

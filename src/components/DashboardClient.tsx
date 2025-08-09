@@ -19,13 +19,14 @@ import dynamic from 'next/dynamic';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import AgentCard from './AgentCard';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Timestamp } from 'firebase/firestore';
 
 
 const DevVaultPanel = dynamic(
   () => import('@/components/DevVaultPanel'),
   {
     ssr: false,
-    loading: () => <p className="text-sm text-center p-4">Loading vaultÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦</p>
+    loading: () => <p className="text-sm text-center p-4">Loading vault...</p>
   }
 );
 
@@ -47,13 +48,13 @@ const StatCard = ({ title, value, unit, icon, ...props }: { title: string, value
 
 const bloomOrder: BloomLevel[] = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'];
 
-const MOCK_GLOBAL_PROGRESS: GlobalProgress = { total: 0, reviewed: 0, percent: 0, level: 5, xp: 250, xpToNext: 1000 };
+const MOCK_GLOBAL_PROGRESS: GlobalProgress = { level: 5, xp: 250, xpToNext: 1000 };
 const MOCK_SETTINGS: UserSettings = { displayName: 'Mock User', email: 'mock@example.com', tokens: 1250, unlockedLevels: {} } as UserSettings;
 const MOCK_DECK_PROGRESS: DeckProgress[] = [
-    { deckId: 'mock1', deckName: 'Cellular Respiration', totalCards: 25, lastStudied: new Date(), isMastered: false, level: 3, xp: 40, xpToNext: 150, progress: 60, bloomMastery: { 'Remember': { correct: 8, total: 10 }, 'Understand': { correct: 5, total: 7 }}},
-    { deckId: 'mock2', deckName: 'Photosynthesis', totalCards: 30, lastStudied: new Date(), isMastered: true, level: 5, xp: 110, xpToNext: 200, progress: 100, bloomMastery: { 'Remember': { correct: 10, total: 10 }, 'Understand': { correct: 9, total: 10 }, 'Apply': {correct: 8, total: 10 }}},
+    { deckId: 'mock1', deckName: 'Cellular Respiration', totalCards: 25, lastStudied: new Date(), isMastered: false, level: 3, xp: 40, xpToNext: 150, bloomMastery: { 'Remember': { correct: 8, total: 10 }, 'Understand': { correct: 5, total: 7 }}},
+    { deckId: 'mock2', deckName: 'Photosynthesis', totalCards: 30, lastStudied: new Date(), isMastered: true, level: 5, xp: 110, xpToNext: 200, bloomMastery: { 'Remember': { correct: 10, total: 10 }, 'Understand': { correct: 9, total: 10 }, 'Apply': {correct: 8, total: 10 }}},
 ];
-const MOCK_XP_STATS: UserXpStats = { sessionXP: 120, dailyXP: 850, bonusVault: 50, commanderXP: (MOCK_GLOBAL_PROGRESS?.xp ?? 0), sessionStart: new Date(), lastDailyReset: new Date(), isXpBoosted: true };
+const MOCK_XP_STATS: UserXpStats = { sessionXP: 120, dailyXP: 850, bonusVault: 50, commanderXP: (MOCK_GLOBAL_PROGRESS?.xp ?? 0), sessionStart: Timestamp.now(), lastDailyReset: Timestamp.now(), isXpBoosted: true };
 
 type DashboardSection = 'header' | 'devControls' | 'dossiers' | 'progressChart';
 const initialSections: DashboardSection[] = ['header', 'devControls', 'dossiers', 'progressChart'];
@@ -75,11 +76,12 @@ export default function DashboardClient() {
     const [sections, setSections] = useState<DashboardSection[]>(initialSections);
 
     useEffect(() => {
-        if (typeof window !== "undefined") {
-            const devModeActive = localStorage.getItem("devMode") === "true";
-            setDevMode(devModeActive);
-        }
+        // This code runs only on the client
+        const devModeActive = localStorage.getItem("devMode") === "true";
+        setDevMode(devModeActive);
+    }, []);
 
+    useEffect(() => {
         const fetchProgress = async () => {
             if (!user) {
                 // If user is not logged in, use mock data by default
@@ -97,65 +99,65 @@ export default function DashboardClient() {
                 getUserXpStats(user.uid)
             ]);
 
-            setGlobalProgress((userProgress as any).global as unknown as import("@/stitch/types").GlobalProgress);
-            setXpStats((userXpStats as unknown) as import("@/stitch/types").UserXpStats | null);
+            setGlobalProgress((userProgress as any).global as GlobalProgress);
+            setXpStats(userXpStats);
 
             const allDecksRaw: any[] = Array.isArray(userTopics)
-  ? userTopics.flatMap((t: any) => Array.isArray(t?.decks) ? t.decks : [])
-  : [];
+                ? userTopics.flatMap((t: any) => Array.isArray(t?.decks) ? t.decks : [])
+                : [];
 
-const decksArr: any[] = Array.isArray(allDecksRaw)
-  ? allDecksRaw
-  : (allDecksRaw ? Object.values(allDecksRaw as any) : []);
+            const decksArr: any[] = Array.isArray(allDecksRaw)
+                ? allDecksRaw
+                : (allDecksRaw ? Object.values(allDecksRaw as any) : []);
 
-const progressByDeck: { [deckId: string]: DeckProgress } = {};
+            const progressByDeck: { [deckId: string]: DeckProgress } = {};
 
-// iterate decks
-for (const deck of (decksArr as any[])) {
-  const key: string = String((deck as any)?.id ?? (deck as any)?.deckId ?? "");
-  if (!key) continue;
+            // iterate decks
+            for (const deck of (decksArr as any[])) {
+            const key: string = String((deck as any)?.id ?? (deck as any)?.deckId ?? "");
+            if (!key) continue;
 
-  const name: string = String((deck as any)?.title ?? (deck as any)?.deckName ?? "Unknown Deck");
-  const decksById = (userProgress.decks ?? {}) as unknown as Record<string, { level: number; xp: number; xpToNext: number }>;
-  const deckSpecificProgress = decksById[key] ?? { level: 1, xp: 0, xpToNext: 100 };
+            const name: string = String((deck as any)?.title ?? (deck as any)?.deckName ?? "Unknown Deck");
+            const decksById = (userProgress.decks ?? {}) as unknown as Record<string, { level: number; xp: number; xpToNext: number }>;
+            const deckSpecificProgress = decksById[key] ?? { level: 1, xp: 0, xpToNext: 100 };
 
-  progressByDeck[key] = {
-    deckId: key,
-    deckName: name,
-    totalCards: Array.isArray((deck as any)?.cards)
-      ? (deck as any).cards.length
-      : (Array.isArray((deck as any)?.cardIds) ? (deck as any).cardIds.length : 0),
-    isMastered: Boolean((deck as any)?.isMastered),
-    lastStudied: new Date(0),
-    bloomMastery: {},
-    ...deckSpecificProgress,
-  };
-}
+            progressByDeck[key] = {
+                deckId: key,
+                deckName: name,
+                totalCards: Array.isArray((deck as any)?.cards)
+                ? (deck as any).cards.length
+                : (Array.isArray((deck as any)?.cardIds) ? (deck as any).cardIds.length : 0),
+                isMastered: Boolean((deck as any)?.isMastered),
+                lastStudied: new Date(0),
+                bloomMastery: {},
+                ...deckSpecificProgress,
+            };
+            }
 
-// fold in attempts
-for (const attempt of (attempts as any[])) {
-  const aid: string = String(attempt?.deckId ?? attempt?.deck_id ?? attempt?.deckID ?? "");
-  if (!aid) continue;
-  const current = progressByDeck[aid];
-  if (!current) continue;
+            // fold in attempts
+            for (const attempt of (attempts as any[])) {
+                const aid: string = String(attempt?.deckId ?? attempt?.deck_id ?? attempt?.deckID ?? "");
+                if (!aid) continue;
+                const current = progressByDeck[aid];
+                if (!current) continue;
 
-  const ts: Date = attempt?.timestamp instanceof Date ? attempt.timestamp : new Date(attempt?.timestamp ?? 0);
-  const last = current.lastStudied ? new Date(current.lastStudied as any) : new Date(0);
-if (ts > last) current.lastStudied = ts;
+                const ts: Date = attempt?.timestamp instanceof Timestamp ? attempt.timestamp.toDate() : new Date(0);
+                const last = current.lastStudied ? new Date(current.lastStudied as any) : new Date(0);
+                if (ts > last) current.lastStudied = ts;
 
-  const lvl: string = String(attempt?.bloomLevel ?? attempt?.level ?? "Unknown");
-  const bm = (current.bloomMastery ?? (current.bloomMastery = {}));
-if (!bm[lvl]) bm[lvl] = { correct: 0, total: 0 };
-const m = bm[lvl]!;
-  m.total += 1;
-  if (Boolean(attempt?.correct)) m.correct += 1;
-}
+                const lvl: BloomLevel = (String(attempt?.bloomLevel ?? attempt?.level ?? "Unknown") as BloomLevel);
+                const bm = (current.bloomMastery ?? (current.bloomMastery = {})) as Record<BloomLevel, { correct: number; total: number }>;
+                if (!bm[lvl]) bm[lvl] = { correct: 0, total: 0 };
+                const m = bm[lvl]!;
+                m.total += 1;
+                if (Boolean(attempt?.wasCorrect)) m.correct += 1;
+            }
 
-const finalProgress = Object.values(progressByDeck).sort((a,b) => {
-  const at = a.lastStudied ? new Date(a.lastStudied as any).getTime() : 0;
-  const bt = b.lastStudied ? new Date(b.lastStudied as any).getTime() : 0;
-  return bt - at;
-});
+            const finalProgress = Object.values(progressByDeck).sort((a,b) => {
+                const at = a.lastStudied ? new Date(a.lastStudied as any).getTime() : 0;
+                const bt = b.lastStudied ? new Date(b.lastStudied as any).getTime() : 0;
+                return bt - at;
+            });
 
             setDeckProgress(finalProgress);
             setIsLoading(false);
@@ -265,7 +267,7 @@ const finalProgress = Object.values(progressByDeck).sort((a,b) => {
                         <CollapsibleContent className="pt-4 space-y-3">
                             <div className="space-y-2">
                                 {bloomOrder.map(level => {
-                                const bm = (progress.bloomMastery ?? {}) as Record<string, { correct: number; total: number }>; const levelData = bm[level];
+                                const bm = (progress.bloomMastery ?? {}) as Record<string, { correct: number; total: number }>; const levelData = bm[level as keyof typeof bm];
                                 if(!levelData || levelData.total === 0) return null;
                                 const accuracy = Math.round((levelData.correct / levelData.total) * 100);
                                 const isMastered = accuracy >= 80;
@@ -306,7 +308,7 @@ const finalProgress = Object.values(progressByDeck).sort((a,b) => {
                 </CardContent>
                 <CardFooter className="justify-center">
                     <Link href="/agent-classified" passHref>
-                        <Button variant="link" className="text-xs text-muted-foreground hover:text-foreground">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ Agent Classified</Button>
+                        <Button variant="link" className="text-xs text-muted-foreground hover:text-foreground">... Agent Classified</Button>
                     </Link>
                 </CardFooter>
             </Card>

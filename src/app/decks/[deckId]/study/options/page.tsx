@@ -1,13 +1,7 @@
 import { redirect } from 'next/navigation';
 
-type PageProps = {
-  params: {
-    deckId: string;
-  };
-};
-
 // This page is deprecated and now just redirects to the main study options hub.
-export default function DeprecatedStudyOptionsPage({ params }: PageProps) {
+export default function DeprecatedStudyOptionsPage({ params }: { params: { deckId: string } }) {
   const { deckId } = params;
   redirect(`/decks/${deckId}/study`);
 }

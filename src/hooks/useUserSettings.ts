@@ -175,7 +175,7 @@ export function useUserSettings() {
     const unsubSelected = onSnapshot(selectedCustomizationsRef, (snap) => {
         selectedCache = snap.exists() 
             ? snap.data() as SelectedCustomizations
-            : { activeAvatarFrame: 'default', theme: null };
+            : { activeAvatarFrame: 'default', activeDeckCovers: {}, activeBadge: 'default' };
         updateCombinedCustomizations();
     });
 

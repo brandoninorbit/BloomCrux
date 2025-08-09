@@ -13,7 +13,7 @@ import type {
   TwoTierMCQCard,
   CERCard,
   SequencingCard as SequencingCardType
-} from "@/types";
+} from "@/stitch/types";
 import { Button } from './ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Check, X } from 'lucide-react';
@@ -455,12 +455,3 @@ export function StudyCard({ card, onLogAttempt, onNextCard, isAnswered: external
     </>
   )
 }
-
-
-
-
-
-
-
-
-

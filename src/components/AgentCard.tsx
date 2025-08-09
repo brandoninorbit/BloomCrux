@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,7 +7,7 @@ import { useUserSettings } from '@/hooks/useUserSettings';
 import { cn } from '@/lib/utils';
 import { Trophy, Star, Shield, Image as ImageIcon, LucideIcon, LockOpen, RefreshCw, Lightbulb, CheckCheck, Timer, Search, HardHat, Coins } from 'lucide-react';
 import { unlockables, Unlockable } from '@/config/devUnlockables';
-import type { GlobalProgress, SelectedCustomizations } from '@/types';
+import type { GlobalProgress, SelectedCustomizations } from '@/stitch/types';
 import {
   Dialog,
   DialogContent,
