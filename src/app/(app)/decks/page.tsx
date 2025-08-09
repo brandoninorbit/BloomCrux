@@ -118,7 +118,7 @@ export default function DecksPage() {
   const heading = useMemo(() => {
     if (mode.kind === "recent") return "Recent Decks";
     const suffix = mode.count != null ? ` (${mode.count} sets)` : "";
-    return `Folder: ${mode.folderName}${suffix}`;
+    return `${mode.folderName}${suffix}`;
   }, [mode]);
   
   const recentDecks: StitchDeck[] = useMemo(() => {
