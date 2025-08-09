@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getTopics, logCardAttempt, purchasePowerUp, getDeckPurchaseCounts, saveUserDeckProgress, getUserDeckProgress, getUserXpStats } from "@/lib/firestore";
-import type { Deck, Flashcard, StandardMCQCard, UserPowerUps, PowerUpType, PurchaseCounts, DeckProgress, UserXpStats, Topic } from "@/stitch/types";
+import type { Deck, Flashcard, StandardMCQCard, UserPowerUps, PowerUpType, PurchaseCounts, UserDeckProgress, UserXpStats, Topic } from "@/stitch/types";
 import { useUserAuth } from "@/app/Providers/AuthProvider";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Loader2, PartyPopper } from "lucide-react";
@@ -42,7 +43,7 @@ export default function RemixStudyPage() {
   const [loading, setLoading] = useState(true);
   const [powerUpsExpanded, setPowerUpsExpanded] = useState(false);
   const [isRetryArmed, setIsRetryArmed] = useState(false);
-  const [deckProgress, setDeckProgress] = useState<DeckProgress | null>(null);
+  const [deckProgress, setDeckProgress] = useState<UserDeckProgress | null>(null);
   const [xpStats, setXpStats] = useState<UserXpStats | null>(null);
   const [disabledOptions, setDisabledOptions] = useState<number[]>([]);
 
@@ -53,7 +54,11 @@ export default function RemixStudyPage() {
     setDisabledOptions([]);
     setIndex(newIndex);
     if(user && deck) {
-        saveUserDeckProgress(user.uid, deck.id, { lastCardIndex: newIndex, mode: 'remix', randomOrder: sessionOrder });
+        saveUserDeckProgress(user.uid, deck.id, {
+          lastCardIndex: newIndex,
+          mode: 'remix',
+          randomOrder: sessionOrder,
+        } as Partial<UserDeckProgress>);
     }
   }, [user, deck, sessionOrder]);
 
@@ -72,7 +77,9 @@ export default function RemixStudyPage() {
                 getUserXpStats(user.uid),
                 getDeckPurchaseCounts(user.uid, deckId)
             ]);
-            setDeckProgress(progress as any);
+            
+            const userDeckProgress = progress as UserDeckProgress | null;
+            setDeckProgress(userDeckProgress);
             setXpStats(stats);
             setPurchaseCounts(counts);
 
@@ -86,18 +93,20 @@ export default function RemixStudyPage() {
                 let initialIndex = 0;
                 let cardsForSession: Flashcard[] = [];
 
-                if (progress?.randomOrder?.length && progress.mode === 'remix' && !isNewRemix) {
+                if (userDeckProgress?.randomOrder?.length && userDeckProgress.mode === 'remix' && !isNewRemix) {
                     // Resume existing remix session
-                    const cardOrder = progress.randomOrder;
+                    const cardOrder = userDeckProgress.randomOrder!;
                     setSessionOrder(cardOrder);
-                    cardsForSession = cardOrder.map(id => foundDeck.cards.find(c => String(c.id) === id)).filter(Boolean) as Flashcard[];
-                    initialIndex = progress.lastCardIndex || 0;
-                    if ((progress as any).streak === 0) {
-                      (progress as any).streak = 0;
+                    cardsForSession = cardOrder
+                      .map((id: string) => foundDeck.cards.find((c: Flashcard) => String(c.id) === id))
+                      .filter(Boolean) as Flashcard[];
+                    initialIndex = userDeckProgress.lastCardIndex || 0;
+                    if (userDeckProgress.streak === 0) {
+                      userDeckProgress.streak = 0;
                     }
                     toast({ title: "Welcome Back!", description: `Resuming your remix mission.` });
                 } else {
-                    if (isNewRemix && progress) (progress as any).streak = 0;
+                    if (userDeckProgress) userDeckProgress.streak = 0;
                     // Start new remix session
                     const shuffledAll = shuffleArray(foundDeck.cards);
                     const missionCards: Flashcard[] = shuffledAll.slice(0, MISSION_LENGTH);
@@ -105,7 +114,12 @@ export default function RemixStudyPage() {
                     setSessionOrder(newCardOrder);
                     cardsForSession = missionCards as Flashcard[];
                     if(user) {
-                      await saveUserDeckProgress(user.uid, deckId, { lastCardIndex: 0, mode: 'remix', randomOrder: newCardOrder, streak: 0 });
+                      await saveUserDeckProgress(user.uid, deckId, {
+                        lastCardIndex: 0,
+                        mode: 'remix',
+                        randomOrder: newCardOrder,
+                        streak: 0
+                      } as Partial<UserDeckProgress>);
                     }
                 }
                 setStudyCards(cardsForSession);
@@ -151,7 +165,11 @@ export default function RemixStudyPage() {
     if (newIndex >= studyCards.length) {
       setIsSessionComplete(true);
       if(user && deck) {
-          saveUserDeckProgress(user.uid, deck.id, { lastCardIndex: 0, mode: 'remix', randomOrder: [] });
+          saveUserDeckProgress(user.uid, deck.id, {
+            lastCardIndex: 0,
+            mode: 'remix',
+            randomOrder: []
+          } as Partial<UserDeckProgress>);
       }
       return;
     }
