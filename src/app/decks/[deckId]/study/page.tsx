@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
 import { getDeck, getUserDeckProgress } from '@/lib/firestore';
 import type { Deck, UserDeckProgress } from '@/types';
-import { Loader2, Info, CaseUpper, Shuffle, Target, Star, Timer, BookOpen, Rocket, RefreshCw } from 'lucide-react';
+import { Loader2, Briefcase, CaseUpper, Shuffle, Target, Star, Timer, BookOpen, Rocket, RefreshCw } from 'lucide-react';
 import DebriefBanner from '@/components/DebriefBanner';
 import MissionCard from '@/components/MissionCard';
 import { Progress } from '@/components/ui/progress';
@@ -24,7 +24,6 @@ const MOCK_PROGRESS: UserDeckProgress = {
     level: 3,
     xp: 50,
     xpToNext: 150,
-    streak: 0,
     lastCardIndex: 0,
     mode: 'quest'
 };
@@ -98,7 +97,7 @@ export default function StudyHubPage() {
         <main className="min-h-screen bg-gray-50/50">
             <div className="container mx-auto max-w-4xl p-4 py-8">
                 <section className="text-center mb-8">
-                    <Info className="h-10 w-10 mx-auto text-primary mb-2" />
+                    <Briefcase className="h-10 w-10 mx-auto text-primary mb-2" />
                     <h1 className="text-3xl font-bold">Agent Briefing</h1>
                     <p className="text-muted-foreground mt-1">
                         Agent, your dossier for <span className="font-semibold text-primary">{deck.title}</span> is ready. Select your assignment.
