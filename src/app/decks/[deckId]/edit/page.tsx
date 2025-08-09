@@ -31,6 +31,19 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+// helper near the top of the file
+const pickCaseInsensitive = (row: any, ...candidates: string[]) => {
+  const keys = Object.keys(row);
+  for (const cand of candidates) {
+    const hit = keys.find(k => k.toLowerCase() === cand.toLowerCase());
+    if (hit) return (row[hit] ?? '').toString();
+  }
+  // fallback: any key containing "bloom"
+  const loose = keys.find(k => /bloom/i.test(k));
+  return loose ? (row[loose] ?? '').toString() : '';
+};
+
+
 // Function to transform a parsed CSV row into a Flashcard object
 const transformRowToCard = (row: any): Flashcard | null => {
     const cardType = row.CardType as CardFormat;
@@ -40,8 +53,12 @@ const transformRowToCard = (row: any): Flashcard | null => {
     
     let bloomLevel: BloomLevel = 'Remember';
 
-    // 1) CSV columns take priority if present
-    const csvBloom = (row.Bloom ?? row.BloomLevel ?? '').toString().trim();
+    // Pull from any reasonable Bloom column name (handles straight/curly apostrophes)
+    const csvBloomRaw = pickCaseInsensitive(
+      row,
+      'Bloom', 'BloomLevel', 'Blooms Level', "Bloom's Level", 'Bloom’s Level'
+    ).trim();
+
     const normalizeBloom = (s: string): BloomLevel | null => {
       const m = s.toLowerCase();
       if (m === 'remember') return 'Remember';
@@ -52,15 +69,18 @@ const transformRowToCard = (row: any): Flashcard | null => {
       if (m === 'create') return 'Create';
       return null;
     };
-    const byColumn = normalizeBloom(csvBloom);
 
-    // 2) Bracket override in the question text
+    const byColumn  = normalizeBloom(csvBloomRaw);
+
+    // Also allow bracket prefix override in the question
     const bracket = (questionText.match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i)?.[1] ?? '');
     const byBracket = normalizeBloom(bracket);
 
-    // Pick best source (column wins, else bracket, else default)
-    bloomLevel = (byColumn ?? byBracket ?? 'Remember') as BloomLevel;
-    if (byBracket) questionText = questionText.replace(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]\s*/i, '').trim();
+    // choose: column > bracket > default
+    bloomLevel = (byColumn ?? byBracket ?? 'Remember');
+    if (byBracket) {
+      questionText = questionText.replace(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]\s*/i, '').trim();
+    }
 
 
     const baseCard: Partial<Flashcard> = {
@@ -194,6 +214,37 @@ export default function EditDeckPage() {
   useEffect(() => {
     const fetchDeckData = async () => {
       setLoading(true);
+
+      const fixBloom = (s: any): BloomLevel | null => {
+        if (!s) return null;
+        const m = String(s).toLowerCase();
+        if (m === 'remember') return 'Remember';
+        if (m === 'understand') return 'Understand';
+        if (m === 'apply') return 'Apply';
+        if (m === 'analyze' || m === 'analyse') return 'Analyze';
+        if (m === 'evaluate') return 'Evaluate';
+        if (m === 'create') return 'Create';
+        return null;
+      };
+
+      const migrateCards = (arr: Flashcard[] = []) =>
+        arr.map(c => {
+          const fromAny =
+            fixBloom((c as any).bloomLevel) ??
+            fixBloom((c as any).bloom) ??
+            fixBloom((c as any).bloom_level) ??
+            fixBloom((c as any).meta?.bloom);
+
+          // last resort: bracket in questionStem
+          const bracket = c.questionStem?.match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i)?.[1];
+          const fromBracket = fixBloom(bracket);
+
+          return {
+            ...c,
+            bloomLevel: (fromAny ?? fromBracket ?? 'Remember') as BloomLevel,
+          };
+        });
+
       if (!user) {
         // Mock data path for logged-out users
         const allMocks = [...MOCK_DECKS_RECENT, ...Object.values(MOCK_DECKS_BY_FOLDER).flat()];
@@ -201,7 +252,7 @@ export default function EditDeckPage() {
         if (mockDeck) {
             const { cards: fetchedCards, ...deckData } = mockDeck;
             setDeck(deckData);
-            setCards(fetchedCards || []);
+            setCards(migrateCards(fetchedCards || []));
             setTitle(mockDeck.title);
             setDescription(mockDeck.description);
         } else {
@@ -219,7 +270,7 @@ export default function EditDeckPage() {
         if (fetchedDeck) {
           const { cards: fetchedCards, ...deckData } = fetchedDeck;
           setDeck(deckData); // Set deck metadata
-          setCards(fetchedCards || []); // Store cards separately
+          setCards(migrateCards(fetchedCards || [])); // Store cards separately
           setTitle(deckData.title);
           setDescription(deckData.description);
         } else {
@@ -245,33 +296,10 @@ export default function EditDeckPage() {
   }, [user, deckId, router, toast]);
 
   useEffect(() => {
-    if (!cards?.length) return;
-    const norm = (s?: string | null) => (s ?? '').trim().toLowerCase();
-    const fix = (s: string): BloomLevel | null => {
-      const m = s.toLowerCase();
-      if (m === 'remember') return 'Remember';
-      if (m === 'understand') return 'Understand';
-      if (m === 'apply') return 'Apply';
-      if (m === 'analyze' || m === 'analyse') return 'Analyze';
-      if (m === 'evaluate') return 'Evaluate';
-      if (m === 'create') return 'Create';
-      return null;
-    };
-    let changed = false;
-    const repaired = cards.map(c => {
-      let b = fix(c.bloomLevel as any);
-      if (!b) {
-        const tag = c.questionStem?.match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/i)?.[1];
-        const fromTag = tag ? fix(tag) : null;
-        if (fromTag) {
-          changed = true;
-          return { ...c, bloomLevel: fromTag };
-        }
-      }
-      return c;
-    });
-    if (changed) setCards(repaired);
+    const set1 = new Set((cards ?? []).map(c => c.bloomLevel ?? (c as any).bloom ?? (c as any).bloom_level ?? (c as any).meta?.bloom ?? '<<none>>'));
+    console.debug('[BloomCrux] Unique Bloom values in deck:', Array.from(set1));
   }, [cards]);
+
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
