@@ -155,7 +155,7 @@ export default function DecksPage() {
         <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="space-y-8">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold">{heading}</h2>
+              <h2 className="text-2xl font-semibold">{heading} <span className="text-xs align-middle">[decks-v3]</span></h2>
               {mode.kind === "recent" ? (
                 <div className="flex gap-2">
                   <Button variant="secondary">New Set</Button>
