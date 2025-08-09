@@ -129,10 +129,11 @@ export type Flashcard = BaseCard & (
 export type Deck = {
     id: string; // From document ID
     title: string;
+    deckName?: string; // Add this to align with progress object
     description: string;
     cards: Flashcard[];
     isMastered?: boolean;
-    // Add other relevant deck metadata
+    totalCards?: number; // Add this to align with progress object
 };
 
 export type Topic = {
@@ -198,6 +199,9 @@ export type UserDeckProgress = {
     xp: number;
     xpToNext: number;
     streak: number;
+    deckName?: string;
+    totalCards?: number;
+    isMastered?: boolean;
 };
 
 // Represents the power-ups a user has available to use.

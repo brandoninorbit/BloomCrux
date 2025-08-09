@@ -95,38 +95,39 @@ export default function DashboardClient() {
 
             setIsLoading(true);
 
-            const [userTopics, attempts, userProgress, userXpStats] = await Promise.all([
-                getTopics(user.uid),
-                getDeckProgress(user.uid),
-                getUserProgress(user.uid),
-                getUserXpStats(user.uid)
+            // OPTIMIZED: These are the only calls needed.
+            const [allDeckProgress, userProgress, userXpStats] = await Promise.all([
+                getDeckProgress(user.uid), // gets all attempts
+                getUserProgress(user.uid), // gets global and deck-specific levels/xp
+                getUserXpStats(user.uid),
             ]);
 
-            setGlobalProgress((userProgress as any).global as GlobalProgress);
+            setGlobalProgress(userProgress.global);
             setXpStats(userXpStats);
-
-            const allDecks: DeckType[] = userTopics.flatMap(t => t.decks || []);
+            
+            const allDecks = userProgress.decks;
 
             const progressByDeck: { [deckId: string]: DeckProgress } = {};
 
-            // Initialize progress for all decks from the topics data
-            for (const deck of allDecks) {
-                if (!deck || !deck.id) continue;
-                const deckSpecificProgress = (userProgress.decks ?? {})[deck.id] || { level: 1, xp: 0, xpToNext: 100 };
+            // Initialize progress for all decks from the user progress data
+            for (const deckId in allDecks) {
+                const deck = allDecks[deckId];
+                if (!deck) continue;
                 
-                progressByDeck[deck.id] = {
-                    deckId: deck.id,
-                    deckName: deck.title,
-                    totalCards: deck.cards?.length || 0,
+                // This data comes directly from the optimized call now
+                progressByDeck[deckId] = {
+                    deckId: deckId,
+                    deckName: deck.deckName || `Deck ${deckId}`, // Fallback name
+                    totalCards: deck.totalCards || 0,
                     isMastered: deck.isMastered || false,
                     lastStudied: new Date(0), // Default value
                     bloomMastery: {},
-                    ...deckSpecificProgress,
+                    ...deck, // Includes level, xp, xpToNext
                 };
             }
 
-            // Fold in attempt data
-            for (const attempt of attempts) {
+            // Fold in attempt data for bloom mastery and lastStudied
+            for (const attempt of allDeckProgress) {
                 if (!attempt.deckId || !progressByDeck[attempt.deckId]) continue;
 
                 const current = progressByDeck[attempt.deckId];

@@ -17,8 +17,9 @@
 
 
 
+
 import { collection, getDocs, query, where, addDoc, serverTimestamp, Timestamp, doc, setDoc, getDoc, runTransaction, writeBatch, increment, deleteDoc, onSnapshot, Unsubscribe, collectionGroup, orderBy, limit } from 'firebase/firestore';
-import { getDb, getFirebaseStorage, getFirebaseAuth } from './firebase';
+import { getDb, getFirebaseAuth, getFirebaseStorage } from './firebase';
 import type { Flashcard, CardAttempt, Topic, UserDeckProgress, UserPowerUps, Deck, BloomLevel, PowerUpType, PurchaseCounts, GlobalProgress, ShopItem, UserInventory, UserXpStats, UserCustomizations, SelectedCustomizations, UserSettings } from '../types';
 import { GLOBAL_SHOP_ITEMS } from './shop-items';
 import { calculateXpForCorrectAnswer } from './xpCalculator';
@@ -68,13 +69,20 @@ export async function getTopics(userId: string): Promise<Topic[]> {
     const docSnap = await getDoc(userTopicsDocRef);
 
     if (docSnap.exists()) {
-        const topicsData = docSnap.data().topics || [];
-        // The cards are not fetched here anymore. They are loaded on-demand.
-        return topicsData;
-    } else {
-        // No topics document for this user yet
-        return [];
+        const data = docSnap.data();
+        if (data && Array.isArray(data.topics)) {
+            const topics = data.topics as Topic[];
+            // Ensure cards array is not present on decks
+            return topics.map(topic => ({
+                ...topic,
+                decks: topic.decks.map(deck => {
+                    const { cards, ...deckWithoutCards } = deck;
+                    return deckWithoutCards;
+                })
+            }));
+        }
     }
+    return [];
 }
 
 /**
@@ -452,23 +460,40 @@ export async function getUserDeckProgress(userId: string, deckId: string): Promi
  * @param userId The ID of the user.
  * @returns An object containing global progress and a map of deck-specific progress.
  */
-export async function getUserProgress(userId: string): Promise<{ global: GlobalProgress, decks: { [deckId: string]: UserDeckProgress } }> {
+export async function getUserProgress(userId: string): Promise<{ global: GlobalProgress, decks: { [deckId: string]: UserDeckProgress & Pick<Deck, 'title' | 'isMastered' | 'totalCards' | 'deckName'> } }> {
     const db = getDb();
     const userProgressRef = doc(db, 'userProgress', userId);
     const decksProgressColRef = collection(db, 'userProgress', userId, 'decks');
+    const userTopicsDocRef = doc(db, 'userTopics', userId);
 
-    const [globalSnap, decksSnap] = await Promise.all([
+    const [globalSnap, decksSnap, topicsSnap] = await Promise.all([
         getDoc(userProgressRef),
-        getDocs(decksProgressColRef)
+        getDocs(decksProgressColRef),
+        getDoc(userTopicsDocRef)
     ]);
 
     const global = globalSnap.exists() 
         ? (globalSnap.data().global || { level: 1, xp: 0, xpToNext: 500 }) 
         : { level: 1, xp: 0, xpToNext: 500 };
+    
+    const topicsData = topicsSnap.exists() ? (topicsSnap.data().topics || []) : [];
+    const deckInfoMap: { [id: string]: Pick<Deck, 'title' | 'isMastered' | 'cards'> } = {};
+    topicsData.forEach((topic: Topic) => {
+        topic.decks.forEach((deck: Deck) => {
+            deckInfoMap[deck.id] = { title: deck.title, isMastered: deck.isMastered || false, cards: deck.cards || [] };
+        });
+    });
 
-    const decks: { [deckId: string]: UserDeckProgress } = {};
+    const decks: { [deckId: string]: any } = {};
     decksSnap.forEach(doc => {
-        decks[doc.id] = doc.data() as UserDeckProgress;
+        const deckId = doc.id;
+        const deckInfo = deckInfoMap[deckId];
+        decks[deckId] = {
+            ...doc.data(),
+            deckName: deckInfo?.title || `Deck ${deckId}`,
+            isMastered: deckInfo?.isMastered || false,
+            totalCards: deckInfo?.cards.length || 0,
+        } as UserDeckProgress;
     });
 
     return { global, decks };
