@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
-import type { Deck, Flashcard } from '@/stitch/types';
+import type { Deck, Flashcard, CardFormat } from '@/stitch/types';
 import { getDeck, saveDeck } from '@/lib/firestore';
 import { Loader2, PlusCircle, Star, Upload, Info, Trash2, FileText, Eye } from 'lucide-react';
 import Link from 'next/link';
@@ -17,6 +17,48 @@ import { useToast } from '@/hooks/use-toast';
 import { MOCK_DECKS_BY_FOLDER, MOCK_DECKS_RECENT } from '@/mock/decks';
 import { cn } from '@/lib/utils';
 import CsvImportGuide from '@/components/CsvImportGuide';
+import Papa from 'papaparse';
+
+// Function to transform a parsed CSV row into a Flashcard object
+const transformRowToCard = (row: any): Flashcard | null => {
+    const cardType = row.CardType as CardFormat;
+    if (!cardType) return null;
+
+    const baseCard: Partial<Flashcard> = {
+        id: crypto.randomUUID(), // Generate a temporary unique ID
+        questionStem: row.Question || row.Prompt || row.Title || '',
+        topic: 'Imported', // Default topic
+        bloomLevel: 'Remember', // Default Bloom Level
+        cardFormat: cardType,
+        isStarred: false,
+    };
+    
+    // Override Bloom's Level if specified in the question
+    const bloomMatch = baseCard.questionStem.match(/^\[(Remember|Understand|Apply|Analyze|Evaluate|Create)\]/);
+    if (bloomMatch) {
+        baseCard.bloomLevel = bloomMatch[1] as any;
+        baseCard.questionStem = baseCard.questionStem.replace(bloomMatch[0], '').trim();
+    }
+
+
+    switch (cardType) {
+        case 'Standard MCQ':
+            return {
+                ...baseCard,
+                tier1: {
+                    question: row.Question,
+                    options: [row.A, row.B, row.C, row.D].filter(Boolean),
+                    correctAnswerIndex: ['A', 'B', 'C', 'D'].indexOf(row.Answer),
+                    distractorRationale: { explanation: row.Explanation }
+                }
+            } as Flashcard;
+        // Add cases for other card types here based on your CSV guide
+        // For simplicity, only Standard MCQ is handled for now.
+        default:
+            return null;
+    }
+};
+
 
 export default function EditDeckPage() {
   const { deckId } = useParams() as { deckId: string };
@@ -36,6 +78,10 @@ export default function EditDeckPage() {
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [cardsLoaded, setCardsLoaded] = useState(false);
   const [isCardsLoading, setIsCardsLoading] = useState(false);
+  
+  // State for imported cards
+  const [newlyImportedCards, setNewlyImportedCards] = useState<Flashcard[]>([]);
+
 
   useEffect(() => {
     const fetchDeckData = async () => {
@@ -94,9 +140,49 @@ export default function EditDeckPage() {
     const file = event.target.files?.[0];
     if (file) {
       setFileName(file.name);
-      // TODO: Handle file processing
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+            const imported = results.data
+                .map(row => transformRowToCard(row))
+                .filter((card): card is Flashcard => card !== null);
+            
+            setNewlyImportedCards(imported);
+
+            if(imported.length > 0) {
+                 toast({
+                    title: "CSV Parsed!",
+                    description: `Found ${imported.length} cards. Click "Add New Cards" to add them to your deck.`,
+                 });
+            } else {
+                 toast({
+                    variant: "destructive",
+                    title: "Parsing Failed",
+                    description: "Could not find any valid cards in the CSV. Please check the format.",
+                 });
+            }
+        },
+        error: (error) => {
+            toast({ variant: "destructive", title: "Parsing Error", description: error.message });
+        }
+      });
     }
   };
+  
+  const handleAddImportedCards = () => {
+    setCards(prev => [...prev, ...newlyImportedCards]);
+    setNewlyImportedCards([]); // Clear the staging area
+    setFileName(null);
+    toast({
+        title: "Cards Added!",
+        description: "The new cards are now in your deck. Don't forget to save your changes.",
+    });
+    if (!cardsLoaded) {
+        handleLoadCards(); // Automatically show the card list if it was hidden
+    }
+  };
+
 
   const handleSaveChanges = async () => {
     if (!user || !deck) {
@@ -113,7 +199,7 @@ export default function EditDeckPage() {
         await saveDeck(user.uid, updatedDeck);
         toast({
             title: "Success!",
-            description: "Your deck has been updated.",
+            description: `The details for deck "${title}" have been updated.`,
         });
         router.push('/decks');
     } catch (error) {
@@ -245,7 +331,14 @@ export default function EditDeckPage() {
                         onChange={handleFileChange}
                     />
                     <span className="text-sm text-muted-foreground">{fileName || 'No file chosen.'}</span>
-                </div>
+                 </div>
+                 {newlyImportedCards.length > 0 && (
+                    <div className="mt-4">
+                        <Button onClick={handleAddImportedCards}>
+                            Add {newlyImportedCards.length} New Cards to Deck
+                        </Button>
+                    </div>
+                )}
             </CardContent>
         </Card>
 
