@@ -182,43 +182,28 @@ export default function DashboardClient() {
         );
     }
     
-    if (!user) {
-         return (
-             <div className="container mx-auto px-6 py-12">
-                <div className="max-w-5xl mx-auto space-y-8">
-                     <Alert variant="default" className="bg-blue-50 border-blue-200">
-                        <Info className="h-5 w-5 text-blue-700" />
-                        <AlertTitle className="text-blue-800 font-semibold">Viewing Mock Data</AlertTitle>
-                        <AlertDescription className="text-blue-700">
-                        This is a preview of the dashboard. Please <Link href="/login" className="font-bold underline">log in</Link> to see your personal progress.
-                        </AlertDescription>
-                    </Alert>
-                    <Card>
-                        <CardHeader className="flex-row items-center justify-between p-4">
-                            <CardTitle>Commander Overview</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 pt-0">
-                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="md:col-span-2 flex flex-col gap-6">
-                                    <GlobalProgressHeader global={MOCK_GLOBAL_PROGRESS} xpStats={MOCK_XP_STATS} />
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 h-full">
-                                        <StatCard title="Total Cards Reviewed" value={MOCK_DECK_PROGRESS.reduce((sum, deck) => sum + Object.values(deck.bloomMastery).reduce((s, l) => s + l.total, 0), 0)} icon={<BookOpen />} />
-                                        <StatCard title="Decks Mastered" value={MOCK_DECK_PROGRESS.filter(d => d.isMastered).length} icon={<Award />} />
-                                    </div>
-                                </div>
-                                <div className="md:col-span-1 h-full">
-                                    <AgentCard 
-                                        globalProgress={MOCK_GLOBAL_PROGRESS} 
-                                        settings={{displayName: MOCK_SETTINGS.displayName ?? "", tokens: MOCK_SETTINGS.tokens ?? 0}}
-                                        photoURL={null}
-                                    />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-             </div>
-         );
+    if (!user && !showExample) {
+        return (
+          <div className="flex h-screen items-center justify-center">
+            <Card className="w-full max-w-md text-center shadow-lg p-8">
+                <CardHeader>
+                    <User className="mx-auto h-16 w-16 text-primary" />
+                    <CardTitle className="font-headline text-2xl mt-4">Welcome to BloomCrux</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground mb-6">Please log in or sign up to view your progress dashboard.</p>
+                    <div className="flex justify-center gap-4">
+                        <Button asChild>
+                           <Link href="/login">Login</Link>
+                        </Button>
+                         <Button asChild variant="secondary">
+                           <Link href="/signup">Sign Up</Link>
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+        )
     }
 
     const progressToDisplay = showExample ? MOCK_DECK_PROGRESS : deckProgress;
@@ -296,7 +281,7 @@ export default function DashboardClient() {
                         </CollapsibleTrigger>
                         <CollapsibleContent className="pt-4 space-y-3">
                             <div className="space-y-2">
-                                {bloomOrder.map(level => {
+                                {(Object.keys(progress.bloomMastery) as BloomLevel[]).map(level => {
                                 const bm = progress.bloomMastery as Partial<Record<BloomLevel, { correct: number; total: number }>>;
                                 const levelData = bm[level];
                                 if(!levelData || levelData.total === 0) return null;
@@ -376,12 +361,12 @@ export default function DashboardClient() {
                     )}
                 </div>
                 
-                {showExample && user && (
+                {showExample && (
                     <Alert variant="default" className="bg-blue-50 border-blue-200">
                         <Info className="h-5 w-5 text-blue-700" />
                         <AlertTitle className="text-blue-800 font-semibold">Viewing Mock Data</AlertTitle>
                         <AlertDescription className="text-blue-700">
-                        You are currently viewing a demonstration of the dashboard. Click "Hide Example" to see your real progress.
+                        This is a preview of the dashboard. {!user ? <>Please <Link href="/login" className="font-bold underline">log in</Link> to see your personal progress.</> : 'Click "Hide Example" to see your real progress.'}
                         </AlertDescription>
                     </Alert>
                 )}
@@ -431,7 +416,3 @@ export default function DashboardClient() {
         </div>
     );
 }
-
-    
-
-    
