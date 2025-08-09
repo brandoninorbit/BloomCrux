@@ -86,7 +86,7 @@ export function Header() {
             >
               About
             </Link>
-            {user && navItems.map((item) => {
+            {navItems.map((item) => {
               const isActive = item.href === '/home' ? pathname === item.href : pathname.startsWith(item.href);
               return (
                 <Link
