@@ -8,7 +8,7 @@ import { getUserDecks, getUserFolders } from "@/adapters/decks";
 import type { DeckSummary, FolderSummary, BloomLevel } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Loader2, Pencil } from "lucide-react";
-import { DeckGrid } from "@/components/DeckGrid";
+import { DeckCardGrid } from "@/components/DeckCardGrid";
 import Link from "next/link";
 import { EditFolderDialog } from "@/components/folders/EditFolderDialog";
 import {
@@ -207,9 +207,8 @@ export default function DecksClient() {
                     variants={gridParentVariants}
                     initial="hidden"
                     animate="show"
-                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6"
                  >
-                    <DeckGrid decks={decks} />
+                    <DeckCardGrid decks={decks} />
                  </motion.div>
               ) : (
                 <p className="text-muted-foreground">{user ? "No recent decks." : ""}</p>
