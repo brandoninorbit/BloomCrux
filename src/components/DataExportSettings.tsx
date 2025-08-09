@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
 import { Download, RotateCcw, Trash2 } from 'lucide-react';
-import { useUserAuth } from "@/context/AuthContext";
+import { useUserAuth } from "@/app/Providers/AuthProvider";
 import { getDb } from "@/lib/firebase";
 import { collection, getDocs, deleteDoc } from "firebase/firestore";
 import { useCallback } from "react";
@@ -68,5 +68,3 @@ export default function DataExportSettings() {
     </div>
   );
 }
-
-

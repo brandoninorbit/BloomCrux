@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from '@/app/providers/AuthProvider';
+import { useAuth } from '@/app/Providers/AuthProvider';
 import { useRouter } from 'next/navigation';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -32,14 +32,14 @@ export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { toast } = useToast();
-  const { signInWithGoogle, signInWithApple } = useAuth();
+  const { signIn, signInWithGoogle, signInWithApple } = useAuth();
   const router = useRouter();
 
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signIn(email, password);
       router.push("/home");
     } catch (err: any) {
       toast({
@@ -92,7 +92,7 @@ export function LoginForm() {
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
-          <Button type="submit" className="w-full" onClick={handleSignIn}>
+          <Button type="submit" className="w-full">
             Login
           </Button>
         </form>
@@ -123,5 +123,3 @@ export function LoginForm() {
     </Card>
   );
 }
-
-

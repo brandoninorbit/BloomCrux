@@ -5,10 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { X, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { PowerUpType, PurchaseCounts, GlobalProgress } from "@/types";
+import type { PowerUpType, PurchaseCounts, GlobalProgress } from "@/stitch/types";
 import { PowerUpMenu } from "@/components/PowerUpModal";
 import AgentCard from "./AgentCard";
-import { useUserAuth } from "@/context/AuthContext";
+import { useUserAuth } from "@/app/Providers/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { getUserProgress } from "@/lib/firestore";
 

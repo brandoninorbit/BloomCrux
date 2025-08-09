@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import React, { useState } from "react";
-import { useAuth } from "@/app/providers/AuthProvider";
+import { useAuth } from "@/app/Providers/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -134,5 +134,3 @@ export function SignupForm() {
     </Card>
   );
 }
-
-

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useUserAuth } from '@/context/AuthContext';
+import { useUserAuth } from '@/app/Providers/AuthProvider';
 import { getUserInventory } from '@/lib/firestore';
 import type { UserInventory, ShopItem } from '@/types';
 import { GLOBAL_SHOP_ITEMS } from '@/lib/shop-items';

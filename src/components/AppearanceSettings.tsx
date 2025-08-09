@@ -12,7 +12,7 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Slider } from './ui/slider';
 import { Button } from './ui/button';
 import AvatarFramePicker from './AvatarFramePicker';
-import { useUserAuth } from '@/context/AuthContext';
+import { useUserAuth } from '@/app/Providers/AuthProvider';
 
 const DEFAULT_ACCENT_COLOR = "#73A9AD";
 
@@ -259,5 +259,3 @@ export default function AppearanceSettings() {
     </div>
   );
 }
-
-

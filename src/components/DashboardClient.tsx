@@ -3,10 +3,10 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import type { Deck as DeckType, DeckProgress, BloomLevel, Topic, UserDeckProgress, GlobalProgress, UserPowerUps, UserXpStats, UserSettings } from '@/types';
+import type { Deck as DeckType, DeckProgress, BloomLevel, Topic, UserDeckProgress, GlobalProgress, UserPowerUps, UserXpStats, UserSettings } from '@/stitch/types';
 import { Loader2, User, BookOpen, Award, Coins, LineChart, ChevronDown, CheckCircle, Target, Zap, Vault, GripVertical, Rocket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useUserAuth } from '@/context/AuthContext';
+import { useUserAuth } from '@/app/Providers/AuthProvider';
 import Link from 'next/link';
 import { getDeckProgress, getTopics, getUserProgress, getUserXpStats } from '@/lib/firestore';
 import GlobalProgressHeader from './GlobalProgressHeader';
@@ -94,8 +94,8 @@ export default function DashboardClient() {
                 getUserXpStats(user.uid)
             ]);
 
-            setGlobalProgress((userProgress as any).global as unknown as import("@/types").GlobalProgress);
-            setXpStats((userXpStats as unknown) as import("@/types").UserXpStats | null);
+            setGlobalProgress((userProgress as any).global as unknown as import("@/stitch/types").GlobalProgress);
+            setXpStats((userXpStats as unknown) as import("@/stitch/types").UserXpStats | null);
 
             const allDecksRaw: any[] = Array.isArray(userTopics)
   ? userTopics.flatMap((t: any) => Array.isArray(t?.decks) ? t.decks : [])
@@ -409,7 +409,3 @@ const finalProgress = Object.values(progressByDeck).sort((a,b) => {
         </div>
     );
 }
-
-
-
-

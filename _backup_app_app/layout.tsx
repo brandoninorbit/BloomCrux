@@ -9,7 +9,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { cn } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { useAuth } from "@/app/providers/AuthProvider";
+import { useAuth } from "@/app/Providers/AuthProvider";
 
 
 function UserNav() {
@@ -85,19 +85,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { user, loading } = useAuth();
     const router = useRouter();
 
-    useEffect(() => {
-        if (!loading && !user) {
-            router.push('/login');
-        }
-    }, [user, loading, router]);
+    // useEffect(() => {
+    //     if (!loading && !user) {
+    //         router.push('/login');
+    //     }
+    // }, [user, loading, router]);
 
-    if (loading || !user) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <p>Loading...</p>
-            </div>
-        );
-    }
+    // if (loading || !user) {
+    //     return (
+    //         <div className="flex items-center justify-center min-h-screen">
+    //             <p>Loading...</p>
+    //         </div>
+    //     );
+    // }
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">

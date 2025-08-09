@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import React, { useEffect, useState, useRef } from 'react';
-import { useUserAuth } from '@/context/AuthContext';
+import { useUserAuth } from '@/app/Providers/AuthProvider';
 import {
   DropdownMenu,
   DropdownMenuContent,

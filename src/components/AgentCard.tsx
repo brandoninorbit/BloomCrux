@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUserAuth } from '@/context/AuthContext';
+import { useUserAuth } from '@/app/Providers/AuthProvider';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { cn } from '@/lib/utils';
 import { Trophy, Star, Shield, Image as ImageIcon, LucideIcon, LockOpen, RefreshCw, Lightbulb, CheckCheck, Timer, Search, HardHat, Coins } from 'lucide-react';
@@ -182,5 +182,3 @@ export default function AgentCard({ className, globalProgress, settings, photoUR
         </aside>
     );
 }
-
-

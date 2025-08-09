@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import type { PowerUpType, PurchaseCounts, ShopItem, UserInventory, UserSettings } from "@/types";
 import { GLOBAL_SHOP_ITEMS } from "@/lib/shop-items";
 import { useEffect, useState } from "react";
-import { useUserAuth } from "@/context/AuthContext";
+import { useUserAuth } from "@/app/Providers/AuthProvider";
 import { getUserInventory } from "@/lib/firestore";
 import { useUserSettings } from "@/hooks/useUserSettings";
 
@@ -114,5 +114,3 @@ const powerUpIcons = {
     Search,
     LockOpen
 };
-
-

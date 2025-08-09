@@ -4,8 +4,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { doc, onSnapshot, setDoc, getDoc, writeBatch } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
-import { useUserAuth } from "@/context/AuthContext";
-import type { UserSettings, UserPowerUps, UserCustomizations, SelectedCustomizations } from "@/types";
+import { useUserAuth } from "@/app/Providers/AuthProvider";
+import type { UserSettings, UserPowerUps, UserCustomizations, SelectedCustomizations } from "@/stitch/types";
 import { saveSelectedCustomizations as saveSelectedCustomizationsFs, getUserCustomizations as getUserCustomizationsFs } from '@/lib/firestore';
 
 const defaultSettings: Omit<UserSettings, 'displayName' | 'email' | 'tokens' | 'unlockedLevels' | 'dataExport'> = {
@@ -33,8 +33,8 @@ const defaultSettings: Omit<UserSettings, 'displayName' | 'email' | 'tokens' | '
     bloomFilter: "all",
     defaultDeckCover: null,
     timedDrill: {
-      defaultTime: 30,
-      autoAdvance: true
+        defaultTime: 30,
+        autoAdvance: true
     }
   },
   privacy: {
@@ -225,8 +225,3 @@ export function useUserSettings() {
 
   return { settings, customizations, updateSettings, saveSelectedCustomizations, loading };
 }
-
-
-
-
-

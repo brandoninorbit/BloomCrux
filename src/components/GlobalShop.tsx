@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { useUserAuth } from '@/context/AuthContext';
+import { useUserAuth } from '@/app/Providers/AuthProvider';
 import { getShopItems, purchaseShopItem } from '@/lib/firestore';
 import type { ShopItem } from '@/types';
 import { Loader2 } from 'lucide-react';
@@ -83,5 +83,3 @@ const GlobalShop = () => {
 };
 
 export default GlobalShop;
-
-

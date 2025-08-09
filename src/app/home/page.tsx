@@ -6,7 +6,7 @@ import { EmptyDeckState } from '@/components/EmptyDeckState';
 import { DueForReviewCard } from '@/components/DueForReviewCard';
 import { TodaySessionCard } from '@/components/TodaySessionCard';
 import type { GlobalProgress } from '@/types';
-import { useUserAuth } from '@/context/AuthContext';
+import { useUserAuth } from '@/app/Providers/AuthProvider';
 import { Loader2, User } from 'lucide-react';
 import { AllCaughtUpCard } from '@/components/AllCaughtUpCard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';

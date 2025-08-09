@@ -3,7 +3,7 @@
 
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useUserAuth } from "@/context/AuthContext";
+import { useUserAuth } from "@/app/Providers/AuthProvider";
 
 // Redirects signed-in users away from auth pages, and can optionally
 // protect private pages by kicking guests to /login.
