@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 import { useUserAuth } from "@/app/Providers/AuthProvider";
 import { getTopics } from "@/lib/firestore";
 import Link from "next/link";
+import { DeckGrid } from "@/components/DeckGrid";
 
 type Folder = { id: string; name: string; decks: StitchDeck[] };
 
@@ -20,37 +21,49 @@ export default function DecksPage() {
   const router = useRouter();
   const search = useSearchParams();
   const qFolder = search.get("folder");
-  const { user } = useUserAuth();
-  
-  // This is the key change: use the real uid if available, otherwise fallback to 'demo-user'
-  const uid = user?.uid || 'demo-user';
+  const { user, loading: authLoading } = useUserAuth();
 
   const [mode, setMode] = useState<Mode>(qFolder ? { kind: "folder", folderId: qFolder, folderName: "..." } : { kind: "recent" });
   
   const [allDecks, setAllDecks] = useState<StitchDeck[]>([]);
   const [allFolders, setAllFolders] = useState<Folder[]>([]);
-
   const [loading, setLoading] = useState(true);
 
-  // Load all user data (topics/decks) once, using the determined uid
+  // Load all user data (topics/decks) once, when the user object is available.
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      // The uid will be either the logged-in user's or 'demo-user'
-      const topics = await getTopics(uid);
-      const decks = topics.flatMap(t => t.decks ?? []);
-      
-      const folders: Folder[] = topics.map(t => ({
-        id: t.id,
-        name: t.name,
-        decks: t.decks ?? []
-      }));
+    // Don't fetch until the auth state is resolved.
+    if (authLoading) return;
 
-      setAllDecks(decks);
-      setAllFolders(folders);
-      setLoading(false);
-    })();
-  }, [uid]);
+    const fetchData = async () => {
+      setLoading(true);
+      // Determine the user ID *inside* the effect.
+      // If logged out, use the mock user. If logged in, use their real ID.
+      const uid = user?.uid || 'demo-user';
+
+      try {
+        const topics = await getTopics(uid);
+        const decks = topics.flatMap(t => t.decks ?? []);
+        
+        const folders: Folder[] = topics.map(t => ({
+          id: t.id,
+          name: t.name,
+          decks: t.decks ?? []
+        }));
+
+        setAllDecks(decks);
+        setAllFolders(folders);
+      } catch (error) {
+          console.error("Failed to fetch decks data:", error);
+          // Handle error case, e.g., show a toast or message
+          setAllDecks([]);
+          setAllFolders([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user, authLoading]); // Rerun only when user or auth loading state changes.
 
   // keep URL synced with view (optional but nice)
   useEffect(() => {
@@ -64,7 +77,7 @@ export default function DecksPage() {
 
   const recentDecks = useMemo(() => {
     // A simple sort by ID for now, a real app would use a timestamp
-    return [...allDecks].sort((a, b) => b.id.localeCompare(a.id)).slice(0, 8);
+    return [...allDecks].sort((a, b) => (b.id || '').localeCompare(a.id || '')).slice(0, 8);
   }, [allDecks]);
 
   const currentFolderDecks = useMemo(() => {
@@ -116,13 +129,7 @@ export default function DecksPage() {
             <Loader2 className="h-4 w-4 animate-spin" /> Loading…
           </div>
         ) : decksToShow && decksToShow.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {decksToShow.map(d => (
-              <Link key={d.id} href={`/decks/${d.id}/study`} className="rounded-xl border p-6 hover:shadow-sm">
-                {d.title}
-              </Link>
-            ))}
-          </div>
+          <DeckGrid decks={decksToShow} />
         ) : (
           <p className="text-sm text-muted-foreground">No decks yet.</p>
         )}
