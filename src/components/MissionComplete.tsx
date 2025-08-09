@@ -39,6 +39,13 @@ export default function MissionComplete({
   const { settings } = useUserSettings();
   const { user } = useUserAuth();
 
+  const stats = [
+    { label: "XP Earned", value: `+${xp}`, tint: "blue" },
+    { label: "Coins", value: `+${coins}`, tint: "yellow" },
+    { label: "Accuracy", value: `${accuracy}%`, tint: "green" },
+    { label: "Answered", value: `${questionsAnswered}`, tint: "purple" },
+  ];
+
   return (
     <div className="container mx-auto p-6 text-slate-900 dark:text-slate-50">
       <div className="grid grid-cols-12 gap-6">
@@ -107,16 +114,19 @@ export default function MissionComplete({
             </p>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8">
-              <StatTile label="XP Earned" value={`+${xp}`} tint="blue" />
-              <StatTile label="Coins" value={`+${coins}`} tint="yellow" />
-              <StatTile label="Accuracy" value={`${accuracy}%`} tint="green" />
-              <StatTile
-                label="Answered"
-                value={`${questionsAnswered}`}
-                tint="purple"
-              />
-            </div>
+            <motion.div
+              variants={{ show:{ transition:{ staggerChildren:0.05 } } }}
+              initial="hidden"
+              animate="show"
+              className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8"
+            >
+              {stats.map(s => (
+                <motion.div key={s.label}
+                  variants={{ hidden:{opacity:0,scale:.96}, show:{opacity:1,scale:1} }}>
+                  <StatTile {...s}/>
+                </motion.div>
+              ))}
+            </motion.div>
 
             {/* Actions */}
             <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
