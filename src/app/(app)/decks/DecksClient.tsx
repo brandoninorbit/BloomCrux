@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import autoAnimate from "@formkit/auto-animate";
 import { useUserAuth } from "@/context/AuthContext";
 import { getUserDecks, getUserFolders } from "@/adapters/decks";
-import type { DeckSummary, FolderSummary } from "@/types";
+import type { DeckSummary, FolderSummary, BloomLevel } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Loader2, Pencil } from "lucide-react";
 import { DeckGrid } from "@/components/DeckGrid";
@@ -25,14 +25,22 @@ import {
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
+type DeckWithProgress = DeckSummary & {
+  progress?: {
+    percent: number;
+    bloomLevel: BloomLevel;
+  };
+};
 
 /** Local, file-scoped mocks (used only when logged out) */
-const MOCK_DECKS: DeckSummary[] = [
-  { id: "m1", name: "Biology 101" },
-  { id: "m2", name: "Spanish Vocabulary" },
-  { id: "m3", name: "World History" },
-  { id: "m4", name: "Organic Chemistry" },
+const MOCK_DECKS: DeckWithProgress[] = [
+  { id: "m1", name: "Biology 101", progress: { percent: 34, bloomLevel: "Understand" } },
+  { id: "m2", name: "Spanish Vocabulary", progress: { percent: 72, bloomLevel: "Apply" } },
+  { id: "m3", name: "World History", progress: { percent: 10, bloomLevel: "Remember" } },
+  { id: "m4", name: "Organic Chemistry", progress: { percent: 0, bloomLevel: "Remember" } },
+  { id: "m5", name: "Anatomy", progress: { percent: 95, bloomLevel: "Evaluate" } },
 ];
+
 const MOCK_FOLDERS: FolderSummary[] = [
   { id: "f1", name: "Science", setCount: 12, color: 'blue' },
   { id: "f2", name: "Languages", setCount: 8, color: 'green' },
@@ -83,13 +91,12 @@ function FolderCard({ folder, onEdit }: { folder: FolderSummary, onEdit: () => v
 
 function SkeletonRow() { 
   const SkeletonCard = () => (
-    <div className="h-28 rounded-2xl bg-slate-100 overflow-hidden relative">
+    <div className="h-48 rounded-2xl bg-slate-100 overflow-hidden relative">
       <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
     </div>
   );
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            <SkeletonCard />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
             <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
@@ -101,7 +108,7 @@ function SkeletonRow() {
 
 export default function DecksClient() {
   const { user } = useUserAuth(); // null when logged out
-  const [decks, setDecks] = useState<DeckSummary[] | null>(null);   // null = loading
+  const [decks, setDecks] = useState<DeckWithProgress[] | null>(null);
   const [folders, setFolders] = useState<FolderSummary[] | null>(null);
   const [editingFolder, setEditingFolder] = useState<FolderSummary | null>(null);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
@@ -129,7 +136,16 @@ export default function DecksClient() {
         getUserDecks(user.uid),
         getUserFolders(user.uid),
       ]);
-      setDecks(d); setFolders(f);
+      // TODO: Fetch real progress data and map it here
+      const decksWithMockProgress = d.map((deck, i) => ({
+        ...deck,
+        progress: {
+          percent: (i * 20 + 5) % 100,
+          bloomLevel: (['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'] as BloomLevel[])[i % 6]
+        }
+      }));
+      setDecks(decksWithMockProgress); 
+      setFolders(f);
     })();
   }, [user]);
 
@@ -191,7 +207,7 @@ export default function DecksClient() {
                     variants={gridParentVariants}
                     initial="hidden"
                     animate="show"
-                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6"
+                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6"
                  >
                     <DeckGrid decks={decks} />
                  </motion.div>
