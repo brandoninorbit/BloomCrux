@@ -19,5 +19,3 @@ export default function DebriefBanner({ recommendation }: DebriefBannerProps) {
     </motion.div>
   );
 }
-
-
