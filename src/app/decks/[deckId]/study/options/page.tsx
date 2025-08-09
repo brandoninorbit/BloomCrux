@@ -6,10 +6,13 @@ import { useEffect } from 'react';
 // This page is deprecated and now just redirects to the main study options page.
 export default function DeprecatedStudyOptionsPage({ params }: { params: { deckId: string } }) {
   const router = useRouter();
+  const { deckId } = params;
 
   useEffect(() => {
-    router.replace(`/decks/${params.deckId}/study`);
-  }, [router, params.deckId]);
+    if (deckId) {
+      router.replace(`/decks/${deckId}/study`);
+    }
+  }, [router, deckId]);
 
   return (
     <div className="flex h-screen items-center justify-center">
