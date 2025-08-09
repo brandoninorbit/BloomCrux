@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { MOCK_DECKS_BY_FOLDER, MOCK_DECKS_RECENT } from '@/mock/decks';
 import { cn } from '@/lib/utils';
+import CsvImportGuide from '@/components/CsvImportGuide';
 
 export default function EditDeckPage() {
   const { deckId } = useParams() as { deckId: string };
@@ -225,10 +226,7 @@ export default function EditDeckPage() {
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Import From CSV</CardTitle>
-                 <Button variant="outline" size="sm">
-                    <Info className="mr-2 h-4 w-4" />
-                    Instructions
-                </Button>
+                 <CsvImportGuide />
             </CardHeader>
              <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
