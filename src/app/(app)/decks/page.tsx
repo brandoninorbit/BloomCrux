@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import type { Topic as StitchTopic, Deck as StitchDeck } from '@/stitch/types';
 import { getTopics } from "@/lib/firestore";
-import { MOCK_DECKS_RECENT, MOCK_FOLDERS, type MockDeck, type MockFolder } from "@/mock/decks";
+import { MOCK_DECKS_RECENT, MOCK_FOLDERS, MOCK_DECKS_BY_FOLDER, type MockDeck, type MockFolder } from "@/mock/decks";
 import { DeckGrid } from "@/components/DeckGrid";
 
 // Force demo in Studio by visiting /decks?demo=1
@@ -150,7 +150,14 @@ export default function DecksPage() {
       const ds = await getDocs(
         query(collection(db, "decks"), where("ownerUid", "==", user.uid), where("folderId", "==", mode.folderId))
       );
-      setFolderDecks(ds.docs.map(d => ({ id: d.id, ...(d.data() as Deck) })));
+      setFolderDecks(
+        ds.docs.map((d) => {
+          const raw = d.data() as Deck;
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { id: _, ...rest } = raw;
+          return { id: d.id, ...rest } as Deck;
+        })
+      );
       setMode({ kind: "folder", folderId: mode.folderId, folderName: name, count });
       setLoading(false);
     })();

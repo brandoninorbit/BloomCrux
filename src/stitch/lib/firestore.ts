@@ -19,6 +19,7 @@
 
 
 
+
 import { collection, getDocs, query, where, addDoc, serverTimestamp, Timestamp, doc, setDoc, getDoc, runTransaction, writeBatch, increment, deleteDoc, onSnapshot, Unsubscribe, collectionGroup, orderBy, limit } from 'firebase/firestore';
 import { getDb, getFirebaseAuth, getFirebaseStorage } from './firebase';
 import type { Flashcard, CardAttempt, Topic, UserDeckProgress, UserPowerUps, Deck, BloomLevel, PowerUpType, PurchaseCounts, GlobalProgress, ShopItem, UserInventory, UserXpStats, UserCustomizations, SelectedCustomizations, UserSettings } from '../types';
@@ -78,7 +79,7 @@ export async function getTopics(userId: string): Promise<Topic[]> {
                 ...topic,
                 decks: topic.decks.map(deck => {
                     const { cards, ...deckWithoutCards } = deck;
-                    return deckWithoutCards;
+                    return { ...deckWithoutCards, cards: [] }; // FIX: add empty cards array
                 })
             }));
         }

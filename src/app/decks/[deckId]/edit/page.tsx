@@ -83,7 +83,8 @@ const DEFAULT_BLOOM_BY_FORMAT: Partial<Record<CardFormat, BloomLevel>> = {
 // Function to transform a parsed CSV row into a Flashcard object
 const transformRowToCard = (row: any): Flashcard | null => {
     // row.* keys are lowercase now
-    const cardType = get(row, 'cardtype', 'card type', 'format', 'type') as CardFormat;
+    const cardTypeRaw = get(row, 'cardtype', 'card type', 'format', 'type');
+    const cardType = (cardTypeRaw === 'other' ? 'text' : cardTypeRaw) as CardFormat;
     if (!cardType) return null;
 
     let questionText = get(row, 'question', 'prompt', 'title', 'stem', 'question stem');
@@ -363,7 +364,7 @@ export default function EditDeckPage() {
         const mockDeck = allMocks.find(d => d.id === deckId);
         if (mockDeck) {
             const { cards: fetchedCards, ...deckData } = mockDeck;
-            setDeck(deckData);
+            setDeck((prev) => ({ ...(prev ?? { cards: [] }), ...deckData }));
             setCards(migrateCards(fetchedCards || []));
             setTitle(mockDeck.title);
             setDescription(mockDeck.description);
@@ -383,7 +384,7 @@ export default function EditDeckPage() {
         const fetchedDeck = await getDeck(user.uid, deckId);
         if (fetchedDeck) {
           const { cards: fetchedCards, ...deckData } = fetchedDeck;
-          setDeck(deckData); // Set deck metadata
+          setDeck((prev) => ({ ...(prev ?? { cards: [] }), ...deckData }));
           setCards(migrateCards(fetchedCards || [])); // Store cards separately
           setTitle(deckData.title);
           setDescription(deckData.description);
