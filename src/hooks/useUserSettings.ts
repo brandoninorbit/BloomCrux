@@ -52,7 +52,7 @@ const defaultSettings: Omit<UserSettings, 'displayName' | 'email' | 'tokens' | '
 export function useUserSettings() {
   const { user } = useUserAuth();
   const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [customizations, setCustomizations] = useState<SelectedCustomizations & UserCustomizations | null>(null);
+  const [customizations, setCustomizations] = useState<UserCustomizations & SelectedCustomizations | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Effect to apply theme and accent color
@@ -124,8 +124,8 @@ export function useUserSettings() {
     const unlockedCustomizationsRef = doc(db, "users", user.uid, "customizations", "unlocked");
     const selectedCustomizationsRef = doc(db, "users", user.uid, "customizations", "selected");
     
-    let unlockedCache: UserCustomizations;
-    let selectedCache: SelectedCustomizations;
+    let unlockedCache: UserCustomizations | null = null;
+    let selectedCache: SelectedCustomizations | null = null;
 
     const updateCombinedCustomizations = () => {
         if (unlockedCache && selectedCache) {

@@ -297,7 +297,8 @@ export default function DashboardClient() {
                         <CollapsibleContent className="pt-4 space-y-3">
                             <div className="space-y-2">
                                 {bloomOrder.map(level => {
-                                const bm = (progress.bloomMastery ?? {}) as Record<string, { correct: number; total: number }>; const levelData = bm[level as keyof typeof bm];
+                                const bm = progress.bloomMastery as Partial<Record<BloomLevel, { correct: number; total: number }>>;
+                                const levelData = bm[level];
                                 if(!levelData || levelData.total === 0) return null;
                                 const accuracy = Math.round((levelData.correct / levelData.total) * 100);
                                 const isMastered = accuracy >= 80;
