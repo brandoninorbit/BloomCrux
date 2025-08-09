@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -23,10 +22,10 @@ type Mode =
   | { kind: "recent" }
   | { kind: "folder"; folderId: string; folderName: string; count?: number };
 
-const FLAG =
+const mockRequested =
   typeof window !== "undefined" &&
-  (process.env.NEXT_PUBLIC_USE_MOCK === "1" ||
-    new URLSearchParams(window.location.search).has("demo"));
+  (new URLSearchParams(window.location.search).has("demo") ||
+    process.env.NEXT_PUBLIC_USE_MOCK === "1");
 
 export default function DecksPage() {
   const { user, loading: authLoading } = useUserAuth();
@@ -40,13 +39,22 @@ export default function DecksPage() {
   const [folderDecks, setFolderDecks] = useState<Deck[] | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Clear mocks if user logs in after seeing them
+  useEffect(() => {
+    if (user) {
+      setFolders([]);
+      setRecent(null);
+      setFolderDecks(null);
+    }
+  }, [user]);
+  
   // MASTER loader: choose data source once auth state is known
   useEffect(() => {
     if (authLoading) return;
 
     // Signed out path
     if (!user) {
-      if (FLAG) {
+      if (mockRequested) {
         // MOCK: never hit Firestore
         setFolders(MOCK_FOLDERS);
         setRecent(MOCK_DECKS_RECENT);
@@ -125,7 +133,7 @@ export default function DecksPage() {
   }
 
   return (
-    <main className="space-y-8">
+    <main className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold">{heading}</h2>
         {mode.kind === "recent" ? (
