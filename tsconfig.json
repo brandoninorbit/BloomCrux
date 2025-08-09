@@ -45,7 +45,6 @@
     "allowJs": true
   },
   "include": [
-    "next-env.d.ts",
     "src/**/*",
     "**/*.ts",
     "**/*.tsx",
