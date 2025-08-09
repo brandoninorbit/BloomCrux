@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
-import type { Deck, Flashcard, CardFormat } from '@/stitch/types';
+import type { Deck, Flashcard, CardFormat, CERPart, DndItem } from '@/stitch/types';
 import { getDeck, saveDeck } from '@/lib/firestore';
 import { Loader2, PlusCircle, Star, Upload, Info, Trash2, FileText, Eye } from 'lucide-react';
 import Link from 'next/link';
@@ -63,8 +63,80 @@ const transformRowToCard = (row: any): Flashcard | null => {
                     distractorRationale: { explanation: row.Explanation }
                 }
             } as Flashcard;
-        // Add cases for other card types here based on your CSV guide
-        // For simplicity, only Standard MCQ is handled for now.
+        case 'Two-Tier MCQ':
+             return {
+                ...baseCard,
+                tier1: {
+                    question: row.Question,
+                    options: [row.A, row.B, row.C, row.D].filter(Boolean),
+                    correctAnswerIndex: ['A', 'B', 'C', 'D'].indexOf(row.Answer),
+                },
+                tier2: {
+                    question: row.Tier2Question,
+                    options: [row.Tier2A, row.Tier2B, row.Tier2C, row.Tier2D].filter(Boolean),
+                    correctAnswerIndex: ['A', 'B', 'C', 'D'].indexOf(row.Tier2Answer),
+                }
+            } as Flashcard;
+        case 'Fill in the Blank':
+            return {
+                ...baseCard,
+                prompt: row.Question,
+                correctAnswer: row.Answer
+            } as Flashcard;
+        case 'Short Answer':
+            return {
+                ...baseCard,
+                prompt: row.Question,
+                suggestedAnswer: row.SuggestedAnswer
+            } as Flashcard;
+        case 'Compare/Contrast':
+            return {
+                ...baseCard,
+                itemA: row.ItemA,
+                itemB: row.ItemB,
+                pairs: (row.Pairs || '').split('|').map((p: string) => {
+                    const [feature, pointA, pointB] = p.split(';');
+                    return { feature, pointA, pointB };
+                })
+            } as Flashcard;
+        case 'Drag and Drop Sorting':
+            const items: DndItem[] = (row.Items || '').split('|').map((item: string) => {
+                const [term, correctCategory] = item.split(';');
+                return { term, correctCategory };
+            });
+            const categories = Array.from(new Set(items.map(i => i.correctCategory)));
+            return {
+                ...baseCard,
+                prompt: row.Title,
+                items,
+                categories,
+            } as Flashcard;
+        case 'Sequencing':
+            const seqItems = (row.Items || '').split('|');
+            return {
+                ...baseCard,
+                prompt: row.Prompt,
+                items: seqItems,
+                correctOrder: seqItems,
+            } as Flashcard;
+        case 'CER':
+            const parts: CERPart[] = (row.Parts || '').split('|').map((partStr: string) => {
+                const [key, type, ...rest] = partStr.split(';');
+                if (type === 'text') {
+                    return { key, inputType: 'text', sampleAnswer: rest[0] };
+                } else if (type === 'mcq') {
+                    const correctIndex = parseInt(rest.pop() || '0', 10);
+                    return { key, inputType: 'mcq', options: rest, correctIndex };
+                }
+                return null;
+            }).filter(Boolean);
+
+            return {
+                ...baseCard,
+                prompt: row.Scenario,
+                question: row.Question,
+                parts,
+            } as Flashcard;
         default:
             return null;
     }
