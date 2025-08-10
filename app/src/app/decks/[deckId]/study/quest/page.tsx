@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
 import { getDeck, logCardAttempt, getUserDeckProgress, saveUserDeckProgress, getDeckPurchaseCounts, purchasePowerUp, getUserXpStats, getCardsForDeckByBloomLevel, getCardById, getUserProgress } from '@/lib/firestore';
-import { getDb } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -198,7 +198,6 @@ export default function QuestPage() {
   const handleRestart = async () => {
     if (!user?.uid || !deckId) return;
     setLoading(true);
-    const db = getDb();
     const sessionRef = doc(db, "users", user.uid, "questSessions", deckId);
     await deleteDoc(sessionRef);
     fetchSession(); // This will re-create the session
