@@ -23,7 +23,7 @@ export default function FrameTesterImpl() {
   const handleSelectFrame = async (frameKey: string) => {
     if (!user) return;
     try {
-      await saveSelectedCustomizations({ activeAvatarFrame: frameKey });
+      await saveSelectedCustomizations(user.uid, { activeAvatarFrame: frameKey });
     } catch (error) {
       console.error("Failed to save frame selection:", error);
     } finally {
