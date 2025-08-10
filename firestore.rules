@@ -1,16 +1,58 @@
+// firestore.rules
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only read and write their own user document.
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    // User doc (optional if you store profile data)
+    match /users/{uid} {
+      // Only the signed-in owner can read/write their user doc
+      allow read, write: if isOwner(uid);
+
+      // Subcollection: folders
+      match /folders/{folderId} {
+        // Owner only
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidFolderCreate(request.resource.data);
+        allow update: if isOwner(uid) && isValidFolderUpdate(resource.data, request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+
+      // If you later add /decks under the user, copy the pattern above.
     }
 
-    // Decks can be read by anyone, but only created, updated, or deleted by the owner.
-    match /decks/{deckId} {
-      allow read: if true;
-      allow create, update, delete: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Validation helpers
+    function isString(x) { return x is string; }
+    function isTimestamp(x) { return x is timestamp; }
+    function inSet(x, allowed) { return x in allowed; }
+
+    // Creation: enforce required fields & types
+    function isValidFolderCreate(data) {
+      return
+        data.keys().hasOnly(['name','color','setCount','createdAt','updatedAt']) &&
+        isString(data.name) && data.name.size() > 0 && data.name.size() <= 60 &&
+        // Limit to your app’s color tokens
+        inSet(data.color, ['blue','green','yellow','purple','pink','orange','gray']) &&
+        ( !('setCount' in data) || (data.setCount is int && data.setCount >= 0) ) &&
+        // createdAt must be set (serverTimestamp resolves to timestamp on commit)
+        ('createdAt' in data) &&
+        ( data.createdAt == request.time || isTimestamp(data.createdAt) ) &&
+        ( !('updatedAt' in data) || data.updatedAt == request.time || isTimestamp(data.updatedAt) );
+    }
+
+    // Update: only allow certain fields to change, keep types sane
+    function isValidFolderUpdate(prev, next) {
+      return
+        next.keys().hasOnly(['name','color','setCount','createdAt','updatedAt']) &&
+        // createdAt is immutable
+        next.createdAt == prev.createdAt &&
+        isString(next.name) && next.name.size() > 0 && next.name.size() <= 60 &&
+        inSet(next.color, ['blue','green','yellow','purple','pink','orange','gray']) &&
+        ( !('setCount' in next) || (next.setCount is int && next.setCount >= 0) ) &&
+        ( !('updatedAt' in next) || next.updatedAt == request.time || isTimestamp(next.updatedAt) );
     }
   }
 }

@@ -1,10 +1,12 @@
-
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+
 import { useUserAuth } from "@/context/AuthContext";
-import { createFolder } from "@/adapters/folders";
+import { db } from "@/stitch/lib/firebase";
+
 import type { FolderColor, FolderSummary } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,48 +43,74 @@ export default function NewFolderPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
     if (!name.trim()) {
       setError("Folder name cannot be empty.");
       return;
     }
-    
+
     setIsSubmitting(true);
     setError(null);
 
     try {
       let newFolder: FolderSummary;
-      if (user) {
-        newFolder = await createFolder(user.uid, { name: name.trim(), color });
+
+      if (user?.uid) {
+        console.log("[folders:create] start", { uid: user.uid, name: name.trim(), color });
+
+        const ref = await addDoc(
+          collection(db, "users", user.uid, "folders"),
+          {
+            name: name.trim(),
+            color,
+            setCount: 0,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          }
+        );
+
+        console.log("[folders:create] success", { id: ref.id });
+
+        newFolder = {
+          id: ref.id,
+          name: name.trim(),
+          color,
+          setCount: 0,
+          updatedAt: new Date(), // for optimistic UI; Firestore has serverTimestamp
+        };
       } else {
-        // Logged-out user: create a temporary mock folder
+        // Logged-out test mode: create a temporary mock (non-persistent)
         newFolder = {
           id: `mock_${Date.now()}`,
           name: name.trim(),
-          color: color,
+          color,
           setCount: 0,
           updatedAt: new Date(),
         };
-        // NOTE: In a real app, you'd use a more robust state management
-        // to pass this back to the previous page. For testing, we'll
-        // just show a success message and redirect. The item will not persist.
+        console.log("[folders:create] mock (logged-out)", newFolder);
       }
-      
-      if (onCreate) {
-        onCreate(newFolder);
-      }
-      
-      toast({ title: "Folder created!", description: `The "${name.trim()}" folder has been added.` });
-      router.push("/decks");
 
+      onCreate?.(newFolder);
+
+      toast({
+        title: "Folder created",
+        description: `“${name.trim()}” has been added.`,
+      });
+
+      router.push("/decks");
     } catch (err) {
+      console.error("[folders:create] error", err);
       setError("Failed to create folder. Please try again.");
-      console.error(err);
+      toast({
+        title: "Couldn’t create folder",
+        description: String(err),
+      });
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
   return (
     <main className="container mx-auto max-w-2xl py-8">
@@ -103,6 +131,7 @@ export default function NewFolderPage({
                 disabled={isSubmitting}
               />
             </div>
+
             <div className="space-y-2">
               <Label>Color</Label>
               <div className="flex flex-wrap gap-3">
@@ -125,7 +154,7 @@ export default function NewFolderPage({
                 ))}
               </div>
             </div>
-            
+
             {error && <p className="text-sm text-destructive">{error}</p>}
 
             <div className="flex justify-end gap-4">

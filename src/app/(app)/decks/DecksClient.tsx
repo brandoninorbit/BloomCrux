@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useEffect, useState, useRef } from "react";
 import autoAnimate from "@formkit/auto-animate";
 import { useUserAuth } from "@/context/AuthContext";
-import { getUserDecks, getUserFolders } from "@/adapters/decks";
+import { getUserDecks } from "@/adapters/decks"; // ⬅ keep decks from adapter
 import type { DeckSummary, FolderSummary, BloomLevel } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Loader2, Pencil } from "lucide-react";
@@ -20,17 +19,20 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+
+// 🔥 Firestore live folders
+import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import { db } from "@/stitch/lib/firebase";
 
 type DeckWithProgress = DeckSummary & {
   progress?: {
     percent: number;
     bloomLevel: BloomLevel;
   };
-  folderId?: string; // Add folderId for filtering
+  folderId?: string; // For filtering
   updatedAt?: number; // For sorting recents
 };
 
@@ -45,11 +47,10 @@ const MOCK_DECKS: DeckWithProgress[] = [
 ];
 
 const MOCK_FOLDERS: FolderSummary[] = [
-  { id: "f1", name: "Science", setCount: 4, color: 'blue' },
-  { id: "f2", name: "Languages", setCount: 1, color: 'green' },
-  { id: "f3", name: "Humanities", setCount: 1, color: 'yellow' },
+  { id: "f1", name: "Science", setCount: 4, color: "blue" },
+  { id: "f2", name: "Languages", setCount: 1, color: "green" },
+  { id: "f3", name: "Humanities", setCount: 1, color: "yellow" },
 ];
-
 
 function colorToClass(color: string = "blue") {
   switch (color) {
@@ -64,13 +65,21 @@ function colorToClass(color: string = "blue") {
   }
 }
 
-function FolderCard({ folder, onEdit, onClick }: { folder: FolderSummary, onEdit: (e: React.MouseEvent) => void, onClick: () => void }) {
+function FolderCard({
+  folder,
+  onEdit,
+  onClick,
+}: {
+  folder: FolderSummary;
+  onEdit: (e: React.MouseEvent) => void;
+  onClick: () => void;
+}) {
   return (
     <div
       onClick={onClick}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick()}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
       className="group w-full text-left bg-white rounded-2xl shadow-md p-5 flex items-center gap-5
                  transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg
                  focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
@@ -88,31 +97,34 @@ function FolderCard({ folder, onEdit, onClick }: { folder: FolderSummary, onEdit
         <p className="font-semibold">{folder.name}</p>
         <p className="text-sm text-muted-foreground">{folder.setCount || 0} sets</p>
       </div>
-      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 hover:bg-blue-100 hover:text-blue-600" onClick={onEdit}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="opacity-0 group-hover:opacity-100 hover:bg-blue-100 hover:text-blue-600"
+        onClick={onEdit}
+      >
         <Pencil className="h-4 w-4" />
       </Button>
     </div>
   );
 }
 
-
-function SkeletonRow() { 
+function SkeletonRow() {
   const SkeletonCard = () => (
     <div className="h-48 rounded-2xl bg-slate-100 overflow-hidden relative">
       <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
     </div>
   );
-    return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-        </div>
-    ); 
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+    </div>
+  );
 }
-
 
 export default function DecksClient() {
   const { user } = useUserAuth(); // null when logged out
@@ -130,23 +142,30 @@ export default function DecksClient() {
   // helper to get recent decks (assumes each deck has updatedAt; fallback to original order)
   const sortKey = (d: any) => d.updatedAt ?? 0;
   const allDecks: DeckWithProgress[] = decks ?? [];
-  const recentDecks = [...allDecks].sort((a, b) => Number(sortKey(b)) - Number(sortKey(a))).slice(0, 5);
+  const recentDecks = [...allDecks]
+    .sort((a, b) => Number(sortKey(b)) - Number(sortKey(a)))
+    .slice(0, 5);
 
-  const selectedFolder = selectedFolderId ? (folders ?? []).find((f) => f.id === selectedFolderId) : null;
-  const folderDecks = selectedFolderId ? allDecks.filter((d) => d.folderId === selectedFolderId) : [];
+  const selectedFolder = selectedFolderId
+    ? (folders ?? []).find((f) => f.id === selectedFolderId)
+    : null;
+  const folderDecks = selectedFolderId
+    ? allDecks.filter((d) => d.folderId === selectedFolderId)
+    : [];
   const visibleDecks = selectedFolderId ? folderDecks : recentDecks;
 
   const heading = selectedFolder
-    ? `${selectedFolder.name} (${folderDecks.length} ${folderDecks.length === 1 ? "set" : "sets"})`
+    ? `${selectedFolder.name} (${folderDecks.length} ${
+        folderDecks.length === 1 ? "set" : "sets"
+      })`
     : "Recent Decks";
-
 
   useEffect(() => {
     if (folderGridRef.current) autoAnimate(folderGridRef.current);
     if (deckGridRef.current) autoAnimate(deckGridRef.current);
   }, [folderGridRef, deckGridRef]);
 
-
+  // 🔁 Load decks (adapter) and mock when logged out
   useEffect(() => {
     if (!user) {
       // Logged out: show mocks, not real fetch
@@ -154,53 +173,96 @@ export default function DecksClient() {
       setFolders(MOCK_FOLDERS);
       return;
     }
-    // Logged in: load real data
-    setDecks(null); setFolders(null);
+
+    // Logged in: load decks once (still from adapter)
+    setDecks(null);
     (async () => {
-      const [d, f] = await Promise.all([
-        getUserDecks(user.uid),
-        getUserFolders(user.uid),
-      ]);
-      // TODO: Fetch real progress data and map it here
+      const d = await getUserDecks(user.uid);
+
+      // TODO: replace mock progress with real progress mapping
       const decksWithMockProgress = d.map((deck, i) => ({
         ...deck,
         progress: {
           percent: (i * 20 + 5) % 100,
-          bloomLevel: (['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'] as BloomLevel[])[i % 6]
+          bloomLevel:
+            (["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"] as BloomLevel[])[i % 6],
         },
-        folderId: f[i % f.length]?.id, // Assign to a mock folder
-        updatedAt: Date.now() - (i * 10000)
+        // If your real data includes folderId, keep it; otherwise this mock line spreads them:
+        // folderId: f[i % f.length]?.id, // (removed: folders now come from live snapshot)
+        updatedAt: Date.now() - i * 10000,
       }));
-      setDecks(decksWithMockProgress); 
-      setFolders(f);
+      setDecks(decksWithMockProgress);
     })();
   }, [user]);
 
+  // 🔴 LIVE Firestore subscription for folders (when logged in)
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    setFolders(null);
+    console.log("[folders:read] subscribe", user.uid);
+
+    const q = query(
+      collection(db, "users", user.uid, "folders"),
+      orderBy("createdAt", "desc")
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snap) => {
+        const next: FolderSummary[] = snap.docs.map((d) => {
+          const data = d.data() as any;
+          return {
+            id: d.id,
+            name: data.name ?? "Untitled",
+            color: data.color ?? "blue",
+            setCount: data.setCount ?? 0,
+            // If you want a Date here and you’re storing serverTimestamp:
+            updatedAt: data.updatedAt?.toMillis
+              ? new Date(data.updatedAt.toMillis())
+              : undefined,
+          };
+        });
+        console.log("[folders:read] snapshot", {
+          size: snap.size,
+          ids: next.map((f) => f.id),
+        });
+        setFolders(next);
+      },
+      (err) => {
+        console.error("[folders:read] error", err);
+        // Optional: keep previous state instead of null on error
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user?.uid]);
+
   const handleUpdateFolder = (updatedFolder: FolderSummary) => {
-    setFolders(currentFolders => 
-        (currentFolders ?? []).map(f => f.id === updatedFolder.id ? updatedFolder : f)
+    setFolders((currentFolders) =>
+      (currentFolders ?? []).map((f) => (f.id === updatedFolder.id ? updatedFolder : f))
     );
   };
-  
+
   const handleCreateFolder = (newFolder: FolderSummary) => {
-    setFolders(currentFolders => [...(currentFolders ?? []), newFolder]);
+    setFolders((currentFolders) => [...(currentFolders ?? []), newFolder]);
   };
-  
+
   const handleNewSetClick = () => {
-    if (folders && folders.length > 0 && !selectedFolder) {
+    if (folders && folders.length > 0 && !selectedFolderId) {
       setShowFolderDialog(true);
     } else {
-       const path = selectedFolderId ? `/decks/new?folderId=${selectedFolderId}` : '/decks/new';
-       router.push(path);
+      const path = selectedFolderId
+        ? `/decks/new?folderId=${selectedFolderId}`
+        : "/decks/new";
+      router.push(path);
     }
   };
 
   const handleSelectFolderForNewSet = (folderId: string) => {
     setShowFolderDialog(false);
-    // You can pass the folderId as a query param to the edit page
     router.push(`/decks/new?folderId=${folderId}`);
   };
-
 
   const loading = user && (decks === null || folders === null);
 
@@ -211,7 +273,7 @@ export default function DecksClient() {
 
   const itemVariants = {
     hidden: { opacity: 0, scale: 0.96, y: 6 },
-    show:   { opacity: 1, scale: 1,    y: 0 },
+    show: { opacity: 1, scale: 1, y: 0 },
   };
 
   return (
@@ -219,37 +281,46 @@ export default function DecksClient() {
       <div className="w-full flex justify-center">
         <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="space-y-12">
-            
             <section>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-semibold">{heading}</h2>
                 <div className="flex gap-2">
-                   {selectedFolder && (
-                    <Button onClick={() => setSelectedFolderId(null)} variant="ghost" className="hover:bg-slate-100">
+                  {selectedFolder && (
+                    <Button
+                      onClick={() => setSelectedFolderId(null)}
+                      variant="ghost"
+                      className="hover:bg-slate-100"
+                    >
                       Back to Recent
                     </Button>
                   )}
                   {selectedFolder ? (
                     <Button onClick={handleNewSetClick}>New Set</Button>
                   ) : (
-                    <Button variant="secondary" onClick={handleNewSetClick}>New Set</Button>
+                    <Button variant="secondary" onClick={handleNewSetClick}>
+                      New Set
+                    </Button>
                   )}
-                  <Button asChild><Link href="/decks/folders/new">New Folder</Link></Button>
+                  <Button asChild>
+                    <Link href="/decks/folders/new">New Folder</Link>
+                  </Button>
                 </div>
               </div>
               {loading ? (
                 <SkeletonRow />
               ) : decks && decks.length > 0 ? (
-                 <motion.div
-                    ref={deckGridRef}
-                    variants={gridParentVariants}
-                    initial="hidden"
-                    animate="show"
-                 >
-                    <DeckCardGrid decks={visibleDecks} />
-                 </motion.div>
+                <motion.div
+                  ref={deckGridRef}
+                  variants={gridParentVariants}
+                  initial="hidden"
+                  animate="show"
+                >
+                  <DeckCardGrid decks={visibleDecks} />
+                </motion.div>
               ) : (
-                <p className="text-muted-foreground">{user ? "No recent decks." : ""}</p>
+                <p className="text-muted-foreground">
+                  {user ? "No recent decks." : ""}
+                </p>
               )}
             </section>
 
@@ -258,36 +329,41 @@ export default function DecksClient() {
               {loading ? (
                 <SkeletonRow />
               ) : folders && folders.length > 0 ? (
-                 <motion.div 
-                    ref={folderGridRef}
-                    variants={gridParentVariants}
-                    initial="hidden"
-                    animate="show"
-                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"
-                 >
-                    {folders.map((f) => (
-                      <motion.div
-                        key={f.id}
-                        variants={itemVariants}
-                        whileHover={{ y: -2 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <FolderCard
-                          folder={f}
-                          onClick={() => setSelectedFolderId(f.id)}
-                          onEdit={(e) => { e.stopPropagation(); setEditingFolder(f); }}
-                        />
-                      </motion.div>
-                    ))}
-                  </motion.div>
+                <motion.div
+                  ref={folderGridRef}
+                  variants={gridParentVariants}
+                  initial="hidden"
+                  animate="show"
+                  className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"
+                >
+                  {folders.map((f) => (
+                    <motion.div
+                      key={f.id}
+                      variants={itemVariants}
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <FolderCard
+                        folder={f}
+                        onClick={() => setSelectedFolderId(f.id)}
+                        onEdit={(e) => {
+                          e.stopPropagation();
+                          setEditingFolder(f);
+                        }}
+                      />
+                    </motion.div>
+                  ))}
+                </motion.div>
               ) : (
-                <p className="text-muted-foreground">{user ? "No folders created yet." : ""}</p>
+                <p className="text-muted-foreground">
+                  {user ? "No folders created yet." : ""}
+                </p>
               )}
             </section>
-
           </div>
         </div>
       </div>
+
       {editingFolder && (
         <EditFolderDialog
           folder={editingFolder}
@@ -299,6 +375,7 @@ export default function DecksClient() {
           }}
         />
       )}
+
       <AlertDialog open={showFolderDialog} onOpenChange={setShowFolderDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -318,13 +395,13 @@ export default function DecksClient() {
                 {folder.name}
               </Button>
             ))}
-             <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => handleSelectFolderForNewSet("unfiled")}
-              >
-                Unfiled
-              </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => handleSelectFolderForNewSet("unfiled")}
+            >
+              Unfiled
+            </Button>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
