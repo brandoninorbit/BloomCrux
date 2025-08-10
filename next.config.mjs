@@ -1,27 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-      },
-      { 
-        protocol: 'https', 
-        hostname: 'firebasestorage.googleapis.com' 
-      },
-      { 
-        protocol: 'https', 
-        hostname: 'lh3.googleusercontent.com' 
-      }
-    ],
-  },
+  reactStrictMode: true,
+  // Note: output: 'export' is not used here, enabling server-side rendering
 };
 
 export default nextConfig;
