@@ -24,6 +24,7 @@ import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, where, orderBy, Timestamp } from "firebase/firestore";
 import { useGuestFolders } from "@/stores/useGuestFolders";
+import FrameTester from "@/components/FrameTester";
 
 
 type DeckWithProgress = DeckSummary & {
@@ -165,25 +166,28 @@ function DeckAreaSwitcher({
           <h2 className="text-2xl font-semibold mb-4">Folders</h2>
            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {folders.map(f => (
-                <motion.button
+                <motion.div
                     key={f.id}
-                    onClick={() => setActiveFolderId(f.id)}
                     whileHover={{ y: -3 }}
                     whileTap={{ scale: 0.98 }}
                     transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                    className={`text-left w-full bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border-2 ${activeFolderId === f.id ? 'border-primary' : 'border-slate-100'} p-5 flex items-center gap-4`}
                 >
-                    <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-blue-100">
-                        <svg className="h-5 w-5 text-blue-600" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" fill="none">
-                            <path d="M4 11h16v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7z" />
-                            <path d="M8 11V8a4 4 0 1 1 8 0v3" />
-                        </svg>
+                    <div
+                        onClick={() => setActiveFolderId(f.id)}
+                        className={`text-left w-full bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border-2 ${activeFolderId === f.id ? 'border-primary' : 'border-slate-100'} p-5 flex items-center gap-4 cursor-pointer`}
+                    >
+                        <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-blue-100">
+                            <svg className="h-5 w-5 text-blue-600" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" fill="none">
+                                <path d="M4 11h16v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7z" />
+                                <path d="M8 11V8a4 4 0 1 1 8 0v3" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div className="font-semibold text-slate-800">{f.name}</div>
+                            <div className="text-slate-500 text-sm">{f.decks.length} sets</div>
+                        </div>
                     </div>
-                    <div>
-                        <div className="font-semibold text-slate-800">{f.name}</div>
-                        <div className="text-slate-500 text-sm">{f.decks.length} sets</div>
-                    </div>
-                </motion.button>
+                </motion.div>
             ))}
            </div>
       </section>
@@ -283,17 +287,20 @@ export default function DecksClient() {
   }
 
   return (
-    <main className="py-8 relative">
-      <div className="w-full flex justify-center">
-        <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-            <DeckAreaSwitcher
-                recentDecks={recentDecks}
-                folders={foldersWithDecks}
-                onNewSet={handleNewSet}
-                onNewFolder={handleNewFolder}
-            />
+    <>
+      <FrameTester />
+      <main className="py-8 relative">
+        <div className="w-full flex justify-center">
+          <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+              <DeckAreaSwitcher
+                  recentDecks={recentDecks}
+                  folders={foldersWithDecks}
+                  onNewSet={handleNewSet}
+                  onNewFolder={handleNewFolder}
+              />
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }
