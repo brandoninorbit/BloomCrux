@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUserAuth } from "@/context/AuthContext";
 import { createFolder } from "@/adapters/folders";
-import type { FolderColor, FolderSummary } from "@/types";
+import type { FolderColor } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,11 +27,7 @@ function colorToHex(c: FolderColor) {
   }
 }
 
-export default function NewFolderPage({
-  onCreate,
-}: {
-  onCreate?: (newFolder: FolderSummary) => void;
-}) {
+export default function Page() {
   const { user } = useUserAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -49,25 +44,27 @@ export default function NewFolderPage({
       setError("Folder name cannot be empty.");
       return;
     }
-    
+
     setIsSubmitting(true);
     setError(null);
 
     try {
       if (user) {
-        const newFolder = await createFolder(user.uid, { name: name.trim(), color });
-        if (onCreate) onCreate(newFolder);
+        await createFolder(user.uid, { name: name.trim(), color });
       } else {
-        // Logged-out user: use the zustand store
+        // Logged-out user: store in the guest folders zustand store
         addGuestFolder({ name: name.trim(), color });
       }
-      
-      toast({ title: "Folder created!", description: `The "${name.trim()}" folder has been added.` });
-      router.push("/decks");
 
+      toast({
+        title: "Folder created!",
+        description: `The "${name.trim()}" folder has been added.`,
+      });
+
+      router.push("/decks");
     } catch (err) {
-      setError("Failed to create folder. Please try again.");
       console.error(err);
+      setError("Failed to create folder. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -92,6 +89,7 @@ export default function NewFolderPage({
                 disabled={isSubmitting}
               />
             </div>
+
             <div className="space-y-2">
               <Label>Color</Label>
               <div className="flex flex-wrap gap-3">
@@ -114,7 +112,7 @@ export default function NewFolderPage({
                 ))}
               </div>
             </div>
-            
+
             {error && <p className="text-sm text-destructive">{error}</p>}
 
             <div className="flex justify-end gap-4">

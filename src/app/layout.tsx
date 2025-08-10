@@ -1,33 +1,19 @@
-
-import type {Metadata} from 'next';
-import './globals.css';
+// src/app/layout.tsx
+import "./globals.css";
+import type { Metadata } from "next";
+import AuthProvider from "@/app/Providers/AuthProvider"; // adjust if you moved it
 import { Toaster } from "@/components/ui/toaster";
-import { cn } from "@/lib/utils";
-import { Lexend } from 'next/font/google'
-import AuthProvider from "@/app/Providers/AuthProvider";
-import { Header } from '@/components/Header';
-
-const lexend = Lexend({
-  subsets: ['latin'],
-  variable: '--font-lexend',
-})
-
 
 export const metadata: Metadata = {
-  title: 'BloomCrux',
-  description: 'A gamified flashcard app for effective learning.',
+  title: "BloomCrux",
+  description: "A gamified flashcard app for effective learning.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={cn("min-h-screen bg-background font-body antialiased", lexend.variable)}>
+    <html lang="en">
+      <body>
         <AuthProvider>
-          <Header />
           {children}
         </AuthProvider>
         <Toaster />

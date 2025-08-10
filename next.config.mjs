@@ -1,7 +1,3 @@
-
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  // No redirects needed here now, as this is handled by src/app/page.tsx
-};
-
+/** @type {import("next").NextConfig} */
+const nextConfig = {};
 export default nextConfig;
