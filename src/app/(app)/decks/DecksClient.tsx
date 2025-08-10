@@ -273,14 +273,16 @@ export default function DecksClient() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-semibold">{heading}</h2>
                 <div className="flex gap-2">
-                   {selectedFolder && (
-                    <Button onClick={() => setSelectedFolderId(null)} variant="ghost" className="hover:bg-slate-100">
-                      Back to Recent
-                    </Button>
+                   {selectedFolder ? (
+                    <>
+                      <Button onClick={() => setSelectedFolderId(null)} variant="ghost" className="hover:bg-slate-100">
+                        Back to Recent
+                      </Button>
+                      <Button onClick={handleNewSetClick}>New Set</Button>
+                    </>
+                  ) : (
+                    <Button asChild><Link href="/decks/folders/new">New Folder</Link></Button>
                   )}
-                  {/* "New Set" is always available now */}
-                  <Button variant={selectedFolder ? "default" : "secondary"} onClick={handleNewSetClick}>New Set</Button>
-                  <Button asChild><Link href="/decks/folders/new">New Folder</Link></Button>
                 </div>
               </div>
               {loading ? (
@@ -380,3 +382,5 @@ export default function DecksClient() {
     </main>
   );
 }
+
+    
