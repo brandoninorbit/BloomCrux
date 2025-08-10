@@ -1,14 +1,7 @@
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async redirects() {
-    return [
-      {
-        source: '/',
-        destination: '/home',
-        permanent: true,
-      },
-    ]
-  },
+  // No redirects needed here now, as this is handled by src/app/page.tsx
 };
 
 export default nextConfig;
