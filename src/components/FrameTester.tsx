@@ -1,19 +1,18 @@
 
 "use client";
+import dynamic from "next/dynamic";
 
-import dynamic from 'next/dynamic';
-
-const FrameTesterImpl = dynamic(
-  () => import('@/components/dev/FrameTesterImpl'),
+// Load the heavy dev widget only in dev or when explicitly enabled
+const DevFrameTester = dynamic(
+  () => import("./dev/FrameTesterImpl"),
   { ssr: false }
 );
 
 export default function FrameTester(props: any) {
-  // This component will only render its implementation if the env var is set.
-  // This makes it safe to include in any page for development purposes.
-  if (process.env.NEXT_PUBLIC_DEV_UI !== '1') {
-    return null;
-  }
+  const enabled =
+    process.env.NODE_ENV === "development" ||
+    process.env.NEXT_PUBLIC_ENABLE_FRAME_TESTER === "true";
 
-  return <FrameTesterImpl {...props} />;
+  if (!enabled) return null; // in prod by default it’s a no-op
+  return <DevFrameTester {...props} />;
 }

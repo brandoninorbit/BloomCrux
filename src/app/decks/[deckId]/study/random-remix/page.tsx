@@ -14,6 +14,20 @@ import MissionComplete from "@/components/MissionComplete";
 import { doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+type RemixSession = {
+  id: string;
+  deckId: string;
+  order: string[];
+  currentIndex: number;
+  totalCards: number;
+  startedAt: any;
+  updatedAt: any;
+  deckTitle?: string;
+};
+
+const isRemixSession = (v: any): v is RemixSession =>
+  v && Array.isArray(v.order) && typeof v.currentIndex === "number";
+
 export default function RandomRemixPage() {
   const { deckId } = useParams<{ deckId: string }>();
   const { user } = useUserAuth();
@@ -39,6 +53,11 @@ export default function RandomRemixPage() {
         fetchAllCardsInDeck: (id) => getAllCardsForDeck(user.uid, id)
       });
       
+      if(!isRemixSession(s)) {
+          setLoading(false);
+          return;
+      }
+
       if(s.currentIndex >= s.order.length) {
           setSession(s);
           setCurrentCard(null);
@@ -63,12 +82,12 @@ export default function RandomRemixPage() {
   }, [fetchSession]);
 
   const percent = useMemo(() => {
-    if (!session?.totalCards || session.totalCards === 0) return 0;
+    if (!isRemixSession(session) || !session?.totalCards || session.totalCards === 0) return 0;
     return Math.floor(100 * (session.currentIndex) / session.totalCards);
   }, [session]);
 
   const handleNextCard = async () => {
-    if (!user?.uid || !session) return;
+    if (!user?.uid || !isRemixSession(session)) return;
     setChecking(true);
     await advanceRemix(user.uid, deckId as string);
 
@@ -78,7 +97,7 @@ export default function RandomRemixPage() {
       fetchAllCardsInDeck: (id) => getAllCardsForDeck(user.uid, id)
     });
     
-    if (s.currentIndex >= s.order.length) {
+    if (!isRemixSession(s) || s.currentIndex >= s.order.length) {
         setSession(s);
         setCurrentCard(null);
         setChecking(false);
@@ -122,15 +141,15 @@ export default function RandomRemixPage() {
     );
   }
 
-  if (!currentCard) {
+  if (!currentCard || !isRemixSession(session)) {
     return (
        <MissionComplete
             modeName="Random Remix"
-            deckName={session?.deckTitle || "Deck"}
+            deckName={isRemixSession(session) ? (session.deckTitle || "Deck") : "Deck"}
             xp={150} // Placeholder
             coins={75} // Placeholder
             accuracy={92} // Placeholder
-            questionsAnswered={session?.totalCards || 0}
+            questionsAnswered={isRemixSession(session) ? session.totalCards : 0}
             onReturnHQ={() => router.push('/dashboard')}
             onRestartMission={handleRestart}
             globalProgress={globalProgress}

@@ -7,14 +7,14 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import type { Flashcard, StandardMCQCard, CompareContrastCard, DragAndDropSortingCard, FillInTheBlankCard, ShortAnswerCard, TwoTierMCQCard, CERCard, SequencingCard, Topic, Deck, StudyMode, DeckProgress, BloomLevel, UserPowerUps, PowerUpType, PurchaseCounts, CardFormat, UserXpStats, UserSettings, GlobalProgress } from '@/stitch/types';
+import type { Flashcard, StandardMCQCard, CompareContrastCard, DragAndDropSortingCard, FillInTheBlankCard, ShortAnswerCard, TwoTierMCQCard, CERCard, SequencingCard, Topic, Deck, StudyMode, DeckProgress, UserPowerUps, PowerUpType, PurchaseCounts, CardFormat, UserXpStats, UserSettings, GlobalProgress } from '@/stitch/types';
 import { Loader2, ArrowLeft, ArrowRight, Check, X, PartyPopper, Lightbulb, History, SkipForward, ShieldAlert, Award } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { useUserAuth } from '@/app/Providers/AuthProvider';
 import { getDeck, logCardAttempt, getUserDeckProgress, saveUserDeckProgress, getDeckPurchaseCounts, purchasePowerUp, getUserXpStats, getCardsForDeckByBloomLevel, getCardById, getUserProgress } from '@/lib/firestore';
-import { getDb } from '@/lib/firebase';
+import { getDb, db } from '@/lib/firebase';
 import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -31,10 +31,31 @@ import {
 import { StudyMissionLayout } from '@/components/StudyMissionLayout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StudyCard } from '@/components/StudyCard';
-import { collection, getDocs, query, where, orderBy, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { getOrCreateQuestSession, ensureLevelOrder, advance } from "@/lib/quest";
 import MissionComplete from '@/components/MissionComplete';
+
+type BloomLevel = "Remember" | "Understand" | "Apply" | "Analyze" | "Evaluate" | "Create";
+
+type QuestSession = {
+  id: string;
+  deckId: string;
+  levels: BloomLevel[];
+  currentLevel: BloomLevel;
+  currentIndex: number;
+  progressByLevel: Record<BloomLevel, string[]>;
+  completedLevels: BloomLevel[];
+  totalCards: number;
+  deckTitle?: string;
+};
+
+const isQuestSession = (v: any): v is QuestSession =>
+  v &&
+  Array.isArray(v.levels) &&
+  Array.isArray(v.completedLevels) &&
+  typeof v.currentIndex === "number" &&
+  v.progressByLevel;
 
 
 export default function QuestPage() {
@@ -60,6 +81,12 @@ export default function QuestPage() {
         fetchCardsByLevel: (lvl) => getCardsForDeckByBloomLevel(user.uid, deckId, lvl)
       });
       
+      if (!isQuestSession(s)) {
+          setLoading(false);
+          toast({ title: "Error", description: "Could not load quest session data.", variant: "destructive" });
+          return;
+      }
+
       if (s.completedLevels.length === s.levels.length && s.levels.length > 0) {
          setSession(s);
          setCurrentCard(null); // No more cards
@@ -80,7 +107,7 @@ export default function QuestPage() {
           fetchCardsByLevel: (lvl) => getCardsForDeckByBloomLevel(user.uid, deckId, lvl)
       });
 
-      const order = updatedSession.progressByLevel[updatedSession.currentLevel] as string[];
+      const order = updatedSession.progressByLevel[updatedSession.currentLevel] ?? [];
       const cardId = order[updatedSession.currentIndex];
       const card = cardId ? await getCardById(user.uid, deckId, cardId) : null;
 
@@ -104,7 +131,7 @@ export default function QuestPage() {
   }, [fetchSession]);
 
   const percentOverall = useMemo(() => {
-    if (!session?.totalCards || session.totalCards === 0) return 0;
+    if (!isQuestSession(session) || !session?.totalCards || session.totalCards === 0) return 0;
     const doneBefore = (session.completedLevels || []).reduce((acc: number, lvl: BloomLevel) => acc + (session.progressByLevel?.[lvl]?.length || 0), 0);
     const doneInLevel = session?.currentIndex || 0;
     return Math.floor(100 * (doneBefore + doneInLevel) / session.totalCards);
@@ -123,6 +150,11 @@ export default function QuestPage() {
       fetchCardsByLevel: (lvl) => getCardsForDeckByBloomLevel(user.uid, deckId, lvl)
     });
     
+    if (!isQuestSession(s)) {
+      setChecking(false);
+      return;
+    }
+
     if (s.completedLevels.length === s.levels.length && s.levels.length > 0) {
         setSession(s);
         setCurrentCard(null);
@@ -143,7 +175,7 @@ export default function QuestPage() {
         fetchCardsByLevel: (lvl) => getCardsForDeckByBloomLevel(user.uid, deckId, lvl)
      });
 
-    const order = updatedSession.progressByLevel[updatedSession.currentLevel] as string[];
+    const order = updatedSession.progressByLevel[updatedSession.currentLevel] ?? [];
     const cardId = order[updatedSession.currentIndex];
     const card = cardId ? await getCardById(user.uid, deckId, cardId) : null;
     
@@ -178,7 +210,7 @@ export default function QuestPage() {
             xp={150} // Placeholder
             coins={75} // Placeholder
             accuracy={92} // Placeholder
-            questionsAnswered={session?.totalCards || 0}
+            questionsAnswered={isQuestSession(session) ? session.totalCards : 0}
             onReturnHQ={() => router.push('/dashboard')}
             onRestartMission={handleRestart}
             globalProgress={globalProgress}
@@ -195,8 +227,8 @@ export default function QuestPage() {
         setPowerUpsExpanded={() => {}}
         onUsePowerUp={() => {}}
         purchaseCounts={{}}
-        currentLevelName={session.currentLevel}
-        cardsLeftInLevel={(session.progressByLevel?.[session.currentLevel]?.length || 0) - session.currentIndex}
+        currentLevelName={isQuestSession(session) ? session.currentLevel : ''}
+        cardsLeftInLevel={isQuestSession(session) ? (session.progressByLevel?.[session.currentLevel]?.length || 0) - session.currentIndex : 0}
     >
        <main className="w-full">
          <motion.div

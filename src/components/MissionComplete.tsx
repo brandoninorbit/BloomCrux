@@ -1,3 +1,4 @@
+
 "use client";
 
 import { ReactNode, useEffect } from "react";
@@ -25,6 +26,11 @@ type Props = {
   globalProgress: GlobalProgress | null;
 };
 
+type Tint = "blue" | "green" | "yellow" | "purple";
+const ALLOWED_TINTS: Tint[] = ["blue", "green", "yellow", "purple"];
+const asTint = (t: string): Tint => (ALLOWED_TINTS.includes(t as Tint) ? (t as Tint) : "blue");
+
+
 export default function MissionComplete({
   modeName,
   deckName,
@@ -41,7 +47,10 @@ export default function MissionComplete({
   const { user } = useUserAuth();
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_DEV_UI === "1") {
+    // Only run confetti if the component is being rendered for a real scenario
+    // (i.e., not a dev preview page) or if explicitly enabled.
+    const isDevPreview = window.location.pathname.includes('/dev/');
+    if (!isDevPreview || process.env.NEXT_PUBLIC_DEV_UI === "1") {
       confetti({ particleCount: 80, spread: 65, origin: { y: 0.7 } });
     }
   }, []);
@@ -130,7 +139,7 @@ export default function MissionComplete({
               {stats.map(s => (
                 <motion.div key={s.label}
                   variants={{ hidden:{opacity:0,scale:.96}, show:{opacity:1,scale:1} }}>
-                  <StatTile {...s}/>
+                  <StatTile {...s} tint={asTint(s.tint)} />
                 </motion.div>
               ))}
             </motion.div>

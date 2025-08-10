@@ -1,84 +1,43 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { doc, getDocs, collection, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useEffect, useState } from "react";
 import { useUserAuth } from "@/app/Providers/AuthProvider";
-import { Button } from "@/components/ui/button";
+import { saveSelectedCustomizations } from "@/lib/firestore";
+import { avatarFrames, FrameConfig } from "@/config/avatarFrames";
 import { AnimatePresence, motion } from "framer-motion";
-import { FlaskConical } from "lucide-react";
-import type { FrameConfig } from "@/config/avatarFrames";
-import { useToast } from "@/hooks/use-toast";
-
-type FrameOption = {
-  key: string;
-  name: string;
-  config: FrameConfig;
-};
+import { FlaskConical, Check } from "lucide-react";
+import { Button } from "../ui/button";
 
 export default function FrameTesterImpl() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [frames, setFrames] = useState<FrameOption[]>([]);
   const { user } = useUserAuth();
-  const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  const [frames, setFrames] = useState<Record<string, FrameConfig>>({});
 
   useEffect(() => {
-    const fetchFrames = async () => {
-      // In a real app, this would fetch from Firestore.
-      // For now, we'll import the static config.
-      const { avatarFrames } = await import("@/config/avatarFrames");
-      const frameOptions: FrameOption[] = Object.entries(avatarFrames).map(
-        ([key, config]) => ({
-          key,
-          name: config.name,
-          config,
-        })
-      );
-      setFrames(frameOptions);
-    };
-    fetchFrames();
+    // In a real app, you might fetch this from Firestore.
+    // For this example, we'll use the local config.
+    setFrames(avatarFrames);
   }, []);
 
   const handleSelectFrame = async (frameKey: string) => {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Not Logged In",
-        description: "You must be logged in to select a frame.",
-      });
-      return;
-    }
+    if (!user) return;
     try {
-      const selectedRef = doc(
-        db,
-        "users",
-        user.uid,
-        "customizations",
-        "selected"
-      );
-      await updateDoc(selectedRef, { activeAvatarFrame: frameKey });
-      toast({
-        title: "Frame Updated!",
-        description: `Set active frame to "${
-          frames.find((f) => f.key === frameKey)?.name
-        }".`,
-      });
-      setIsOpen(false);
+      await saveSelectedCustomizations(user.uid, { activeAvatarFrame: frameKey });
     } catch (error) {
-      console.error("Failed to update frame:", error);
-      toast({ variant: "destructive", title: "Update Failed" });
+      console.error("Failed to save frame selection:", error);
+    } finally {
+      setIsOpen(false);
     }
   };
 
   return (
-    <div className="fixed top-1/2 left-4 z-[1000] -translate-y-1/2">
+    <div className="fixed bottom-4 left-4 z-[1000]">
       <div className="relative">
         <Button
-          variant="secondary"
           size="icon"
-          className="rounded-full shadow-lg h-12 w-12"
           onClick={() => setIsOpen(!isOpen)}
+          className="rounded-full h-12 w-12 shadow-lg"
         >
           <FlaskConical />
         </Button>
@@ -88,17 +47,19 @@ export default function FrameTesterImpl() {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
-              className="absolute left-full top-0 ml-2 w-56 rounded-md bg-background shadow-lg border"
+              className="absolute bottom-0 left-16 w-64 bg-background border rounded-lg shadow-xl p-2"
             >
-              <div className="p-2 font-semibold border-b">Test Frames</div>
-              <ul className="py-1">
-                {frames.map((frame) => (
-                  <li key={frame.key}>
+              <div className="font-semibold p-2">Select a Frame</div>
+              <ul>
+                {Object.entries(frames).map(([key, frame]) => (
+                  <li key={key}>
                     <button
-                      onClick={() => handleSelectFrame(frame.key)}
-                      className="w-full text-left px-3 py-1.5 text-sm hover:bg-accent"
+                      onClick={() => handleSelectFrame(key)}
+                      className="w-full text-left p-2 rounded-md hover:bg-accent flex items-center justify-between"
                     >
-                      {frame.name}
+                      <span>{frame.name}</span>
+                      {/* You would need to fetch the user's current selection to show a checkmark */}
+                      {/* <Check className="h-4 w-4" /> */}
                     </button>
                   </li>
                 ))}
