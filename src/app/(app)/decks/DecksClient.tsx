@@ -1,13 +1,14 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import autoAnimate from "@formkit/auto-animate";
 import { useUserAuth } from "@/context/AuthContext";
 import { getUserDecks, getUserFolders } from "@/adapters/decks";
-import type { DeckSummary, FolderSummary } from "@/types";
+import type { DeckSummary, FolderSummary, BloomLevel } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Loader2, Pencil } from "lucide-react";
-import { DeckGrid } from "@/components/DeckGrid";
+import { DeckCardGrid } from "@/components/DeckCardGrid";
 import Link from "next/link";
 import { EditFolderDialog } from "@/components/folders/EditFolderDialog";
 import {
@@ -22,19 +23,31 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
+type DeckWithProgress = DeckSummary & {
+  progress?: {
+    percent: number;
+    bloomLevel: BloomLevel;
+  };
+  folderId?: string; // Add folderId for filtering
+  updatedAt?: number; // For sorting recents
+};
 
 /** Local, file-scoped mocks (used only when logged out) */
-const MOCK_DECKS: DeckSummary[] = [
-  { id: "m1", name: "Biology 101" },
-  { id: "m2", name: "Spanish Vocabulary" },
-  { id: "m3", name: "World History" },
-  { id: "m4", name: "Organic Chemistry" },
+const MOCK_DECKS: DeckWithProgress[] = [
+  { id: "m1", name: "Biology 101", progress: { percent: 34, bloomLevel: "Understand" }, folderId: "f1", updatedAt: Date.now() - 10000 },
+  { id: "m2", name: "Spanish Vocabulary", progress: { percent: 72, bloomLevel: "Apply" }, folderId: "f2", updatedAt: Date.now() - 20000 },
+  { id: "m3", name: "World History", progress: { percent: 10, bloomLevel: "Remember" }, folderId: "f3", updatedAt: Date.now() - 30000 },
+  { id: "m4", name: "Organic Chemistry", progress: { percent: 0, bloomLevel: "Remember" }, folderId: "f1", updatedAt: Date.now() - 40000 },
+  { id: "m5", name: "Anatomy", progress: { percent: 95, bloomLevel: "Evaluate" }, folderId: "f1", updatedAt: Date.now() - 50000 },
+  { id: "m6", name: "Intro to Physics", progress: { percent: 22, bloomLevel: "Apply" }, folderId: "f1", updatedAt: Date.now() - 60000 },
 ];
+
 const MOCK_FOLDERS: FolderSummary[] = [
-  { id: "f1", name: "Science", setCount: 12, color: 'blue' },
-  { id: "f2", name: "Languages", setCount: 8, color: 'green' },
-  { id: "f3", name: "Humanities", setCount: 4, color: 'yellow' },
+  { id: "f1", name: "Science", setCount: 4, color: 'blue' },
+  { id: "f2", name: "Languages", setCount: 1, color: 'green' },
+  { id: "f3", name: "Humanities", setCount: 1, color: 'yellow' },
 ];
 
 
@@ -51,12 +64,16 @@ function colorToClass(color: string = "blue") {
   }
 }
 
-function FolderCard({ folder, onEdit }: { folder: FolderSummary, onEdit: () => void }) {
+function FolderCard({ folder, onEdit, onClick }: { folder: FolderSummary, onEdit: (e: React.MouseEvent) => void, onClick: () => void }) {
   return (
     <div
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick()}
       className="group w-full text-left bg-white rounded-2xl shadow-md p-5 flex items-center gap-5
-                 hover:shadow-lg hover:-translate-y-1 transition-transform duration-300 focus:outline-none
-                 focus-visible:ring-2 focus-visible:ring-primary/40"
+                 transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
     >
       <div
         className={`w-12 h-12 rounded-lg flex items-center justify-center 
@@ -80,10 +97,18 @@ function FolderCard({ folder, onEdit }: { folder: FolderSummary, onEdit: () => v
 
 
 function SkeletonRow() { 
+  const SkeletonCard = () => (
+    <div className="h-48 rounded-2xl bg-slate-100 overflow-hidden relative">
+      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+    </div>
+  );
     return (
-        <div className="space-y-4">
-            <div className="h-24 rounded-lg bg-muted/40 animate-pulse" />
-            <div className="h-24 rounded-lg bg-muted/40 animate-pulse" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
         </div>
     ); 
 }
@@ -91,11 +116,36 @@ function SkeletonRow() {
 
 export default function DecksClient() {
   const { user } = useUserAuth(); // null when logged out
-  const [decks, setDecks] = useState<DeckSummary[] | null>(null);   // null = loading
+  const [decks, setDecks] = useState<DeckWithProgress[] | null>(null);
   const [folders, setFolders] = useState<FolderSummary[] | null>(null);
   const [editingFolder, setEditingFolder] = useState<FolderSummary | null>(null);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const router = useRouter();
+  const folderGridRef = useRef<HTMLDivElement>(null);
+  const deckGridRef = useRef<HTMLDivElement>(null);
+
+  // --- state & selectors for folder view ---
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
+  // helper to get recent decks (assumes each deck has updatedAt; fallback to original order)
+  const sortKey = (d: any) => d.updatedAt ?? 0;
+  const allDecks: DeckWithProgress[] = decks ?? [];
+  const recentDecks = [...allDecks].sort((a, b) => Number(sortKey(b)) - Number(sortKey(a))).slice(0, 5);
+
+  const selectedFolder = selectedFolderId ? (folders ?? []).find((f) => f.id === selectedFolderId) : null;
+  const folderDecks = selectedFolderId ? allDecks.filter((d) => d.folderId === selectedFolderId) : [];
+  const visibleDecks = selectedFolderId ? folderDecks : recentDecks;
+
+  const heading = selectedFolder
+    ? `${selectedFolder.name} (${folderDecks.length} ${folderDecks.length === 1 ? "set" : "sets"})`
+    : "Recent Decks";
+
+
+  useEffect(() => {
+    if (folderGridRef.current) autoAnimate(folderGridRef.current);
+    if (deckGridRef.current) autoAnimate(deckGridRef.current);
+  }, [folderGridRef, deckGridRef]);
+
 
   useEffect(() => {
     if (!user) {
@@ -111,7 +161,18 @@ export default function DecksClient() {
         getUserDecks(user.uid),
         getUserFolders(user.uid),
       ]);
-      setDecks(d); setFolders(f);
+      // TODO: Fetch real progress data and map it here
+      const decksWithMockProgress = d.map((deck, i) => ({
+        ...deck,
+        progress: {
+          percent: (i * 20 + 5) % 100,
+          bloomLevel: (['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'] as BloomLevel[])[i % 6]
+        },
+        folderId: f[i % f.length]?.id, // Assign to a mock folder
+        updatedAt: Date.now() - (i * 10000)
+      }));
+      setDecks(decksWithMockProgress); 
+      setFolders(f);
     })();
   }, [user]);
 
@@ -126,10 +187,11 @@ export default function DecksClient() {
   };
   
   const handleNewSetClick = () => {
-    if (folders && folders.length > 0) {
+    if (folders && folders.length > 0 && !selectedFolder) {
       setShowFolderDialog(true);
     } else {
-      router.push(`/decks/new`);
+       const path = selectedFolderId ? `/decks/new?folderId=${selectedFolderId}` : '/decks/new';
+       router.push(path);
     }
   };
 
@@ -142,6 +204,16 @@ export default function DecksClient() {
 
   const loading = user && (decks === null || folders === null);
 
+  const gridParentVariants = {
+    hidden: {},
+    show: { transition: { staggerChildren: 0.06 } },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, scale: 0.96, y: 6 },
+    show:   { opacity: 1, scale: 1,    y: 0 },
+  };
+
   return (
     <main className="py-8 relative">
       <div className="w-full flex justify-center">
@@ -150,16 +222,32 @@ export default function DecksClient() {
             
             <section>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-semibold">Recent Decks</h2>
+                <h2 className="text-2xl font-semibold">{heading}</h2>
                 <div className="flex gap-2">
-                  <Button variant="secondary" onClick={handleNewSetClick}>New Set</Button>
+                   {selectedFolder && (
+                    <Button onClick={() => setSelectedFolderId(null)} variant="ghost" className="hover:bg-slate-100">
+                      Back to Recent
+                    </Button>
+                  )}
+                  {selectedFolder ? (
+                    <Button onClick={handleNewSetClick}>New Set</Button>
+                  ) : (
+                    <Button variant="secondary" onClick={handleNewSetClick}>New Set</Button>
+                  )}
                   <Button asChild><Link href="/decks/folders/new">New Folder</Link></Button>
                 </div>
               </div>
               {loading ? (
                 <SkeletonRow />
               ) : decks && decks.length > 0 ? (
-                <DeckGrid decks={decks} />
+                 <motion.div
+                    ref={deckGridRef}
+                    variants={gridParentVariants}
+                    initial="hidden"
+                    animate="show"
+                 >
+                    <DeckCardGrid decks={visibleDecks} />
+                 </motion.div>
               ) : (
                 <p className="text-muted-foreground">{user ? "No recent decks." : ""}</p>
               )}
@@ -170,15 +258,28 @@ export default function DecksClient() {
               {loading ? (
                 <SkeletonRow />
               ) : folders && folders.length > 0 ? (
-                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                 <motion.div 
+                    ref={folderGridRef}
+                    variants={gridParentVariants}
+                    initial="hidden"
+                    animate="show"
+                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"
+                 >
                     {folders.map((f) => (
-                      <FolderCard
+                      <motion.div
                         key={f.id}
-                        folder={f}
-                        onEdit={() => setEditingFolder(f)}
-                      />
+                        variants={itemVariants}
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <FolderCard
+                          folder={f}
+                          onClick={() => setSelectedFolderId(f.id)}
+                          onEdit={(e) => { e.stopPropagation(); setEditingFolder(f); }}
+                        />
+                      </motion.div>
                     ))}
-                  </div>
+                  </motion.div>
               ) : (
                 <p className="text-muted-foreground">{user ? "No folders created yet." : ""}</p>
               )}

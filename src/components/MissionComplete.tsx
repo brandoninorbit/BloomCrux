@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import AgentCard from "@/components/AgentCard";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Trophy, ArrowLeft, RefreshCcw } from "lucide-react";
 import { useUserAuth } from "@/app/Providers/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import type { GlobalProgress } from "@/types";
+import confetti from "canvas-confetti";
 
 type Props = {
   modeName: string;
@@ -38,6 +39,19 @@ export default function MissionComplete({
 }: Props) {
   const { settings } = useUserSettings();
   const { user } = useUserAuth();
+
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_DEV_UI === "1") {
+      confetti({ particleCount: 80, spread: 65, origin: { y: 0.7 } });
+    }
+  }, []);
+
+  const stats = [
+    { label: "XP Earned", value: `+${xp}`, tint: "blue" },
+    { label: "Coins", value: `+${coins}`, tint: "yellow" },
+    { label: "Accuracy", value: `${accuracy}%`, tint: "green" },
+    { label: "Answered", value: `${questionsAnswered}`, tint: "purple" },
+  ];
 
   return (
     <div className="container mx-auto p-6 text-slate-900 dark:text-slate-50">
@@ -77,19 +91,27 @@ export default function MissionComplete({
 
           {/* Card */}
           <div className="rounded-2xl border bg-card dark:bg-card p-8 shadow-sm relative overflow-hidden">
-            {/* Emblem */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.35 }}
-              className="mx-auto w-24 h-24 mb-6 flex items-center justify-center rounded-full
-                         text-primary
-                         ring-2 ring-primary/10"
-              aria-label="Mission complete emblem"
-              role="img"
-            >
-              <Trophy className="w-12 h-12" />
-            </motion.div>
+            {/* Emblem with pulsing glow */}
+            <div className="relative mx-auto mb-6 w-24 h-24">
+              {/* animated halo */}
+              <motion.div
+                className="absolute inset-0 rounded-full"
+                initial={{ boxShadow: "0 0 0 0 rgba(37,99,235,0.35)" }}
+                animate={{ boxShadow: [
+                  "0 0 0 0 rgba(37,99,235,0.35)",
+                  "0 0 0 14px rgba(37,99,235,0.00)"
+                ]}}
+                transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+              />
+              <div className="absolute inset-0 rounded-full bg-blue-400/25 blur-xl dark:bg-blue-950/40" />
+              <div className="absolute inset-1 rounded-full ring-2 ring-blue-200 dark:ring-blue-900/50" />
+              <div className="relative w-full h-full rounded-full bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center shadow-[0_10px_20px_rgba(30,64,175,0.12)]">
+                <svg className="w-12 h-12 text-blue-700 dark:text-blue-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                  <path d="M8 21h8M12 17v4M7 4h10v3a5 5 0 0 1-10 0V4Z" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M7 7H5a2 2 0 0 0 2 2M17 7h2a2 2 0 0 1-2 2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+            </div>
 
             <h1 className="text-2xl md:text-3xl font-bold text-center">
               Agent, mission accomplished.
@@ -99,16 +121,19 @@ export default function MissionComplete({
             </p>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8">
-              <StatTile label="XP Earned" value={`+${xp}`} tint="blue" />
-              <StatTile label="Coins" value={`+${coins}`} tint="yellow" />
-              <StatTile label="Accuracy" value={`${accuracy}%`} tint="green" />
-              <StatTile
-                label="Answered"
-                value={`${questionsAnswered}`}
-                tint="purple"
-              />
-            </div>
+            <motion.div
+              variants={{ show:{ transition:{ staggerChildren:0.05 } } }}
+              initial="hidden"
+              animate="show"
+              className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8"
+            >
+              {stats.map(s => (
+                <motion.div key={s.label}
+                  variants={{ hidden:{opacity:0,scale:.96}, show:{opacity:1,scale:1} }}>
+                  <StatTile {...s}/>
+                </motion.div>
+              ))}
+            </motion.div>
 
             {/* Actions */}
             <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">

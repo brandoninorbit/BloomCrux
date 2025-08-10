@@ -13,6 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 const MOCK_DECK: Deck = {
     id: 'mock-deck',
@@ -95,6 +96,83 @@ export default function StudyHubPage() {
     const deckXpToNext = progress?.xpToNext || 100;
     const hasStartedQuest = progress && progress.lastCardIndex > 0 && progress.mode === 'quest';
     const hasStartedRemix = progress && progress.randomOrder && progress.randomOrder.length > 0 && progress.mode === 'remix';
+    const percent = deckXpToNext > 0 ? (deckXp / deckXpToNext) * 100 : 0;
+
+    const missions = [
+        {
+            id: 'quest',
+            icon: CaseUpper,
+            title: 'Operation: Quest',
+            description: 'Standard-issue progression. Complete objectives in order.',
+            children: hasStartedQuest ? (
+                <>
+                    <Button className="w-full" asChild>
+                        <Link href={`/decks/${deckId}/study/quest`}>Continue Mission</Link>
+                    </Button>
+                    <Button variant="ghost" className="w-full" asChild>
+                        <Link href={`/decks/${deckId}/study/quest?new=true`}>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Restart Mission
+                        </Link>
+                    </Button>
+                </>
+            ) : (
+                <Button className="w-full" asChild>
+                    <Link href={`/decks/${deckId}/study/quest`}>Begin Mission</Link>
+                </Button>
+            ),
+        },
+        {
+            id: 'random-remix',
+            icon: Shuffle,
+            title: 'Operation: Random Remix',
+            description: 'A chaotic encounter. All intel is randomized.',
+            children: hasStartedRemix ? (
+                 <Button className="w-full" asChild>
+                    <Link href={`/decks/${deckId}/study/random-remix`}>Continue Mission</Link>
+                </Button>
+             ) : (
+                 <Button className="w-full" asChild>
+                    <Link href={`/decks/${deckId}/study/random-remix`}>Begin Mission</Link>
+                </Button>
+             ),
+        },
+        {
+            id: 'practice',
+            icon: Target,
+            title: 'Operation: Target Practice',
+            description: 'Hone your skills by focusing on known weak points.',
+            children: <Button className="w-full" asChild><Link href={`/decks/${deckId}/study/practice`}>Engage Targets</Link></Button>,
+        },
+        {
+            id: 'starred',
+            icon: Star,
+            title: 'Operation: Starred Assets',
+            description: "Review high-value intel you've personally marked.",
+            children: <Button className="w-full" asChild><Link href={`/decks/${deckId}/study/starred`}>Review Starred</Link></Button>,
+        },
+        {
+            id: 'timed',
+            icon: Timer,
+            title: 'Operation: Timed Drill',
+            description: 'A high-pressure speed trial. Answer before the clock runs out.',
+            children: <Button className="w-full" asChild><Link href={`/decks/${deckId}/study/timed`}>Start Drill</Link></Button>,
+        },
+        {
+            id: 'level-up',
+            icon: BookOpen,
+            title: 'Operation: Level Up',
+            description: 'Advance your clearance one cognitive level at a time.',
+            children: <Button className="w-full" asChild><Link href={`/decks/${deckId}/study/level-up`}>Enter Level-Up</Link></Button>,
+        },
+        {
+            id: 'topic-trek',
+            icon: Rocket,
+            title: 'Operation: Topic Trek',
+            description: 'Infiltrate specific subjects by topic tag.',
+            children: <Button className="w-full" asChild><Link href={`/decks/${deckId}/study/topic-trek`}>Explore Topics</Link></Button>,
+        },
+    ];
 
     return (
         <main className="min-h-screen bg-gray-50/50">
@@ -110,97 +188,41 @@ export default function StudyHubPage() {
                             <span>Deck Level: {deckLevel}</span>
                             <span>{deckXp} / {deckXpToNext} XP</span>
                         </div>
-                        <Progress value={(deckXp/deckXpToNext) * 100} />
+                        <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${percent}%` }}
+                            transition={{ duration: 0.6, ease: "easeOut" }}
+                            className="h-2 bg-primary rounded-full"
+                          />
+                        </div>
                     </div>
                 </section>
 
                 <DebriefBanner recommendation="We recommend you finish the Quest to tailor the rest of your tasks." />
                 
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <MissionCard
-                        icon={CaseUpper}
-                        title="Operation: Quest"
-                        description="Standard-issue progression. Complete objectives in order."
-                    >
-                        {hasStartedQuest ? (
-                            <>
-                                <Button className="w-full" asChild>
-                                    <Link href={`/decks/${deckId}/study/quest`}>Continue Mission</Link>
-                                </Button>
-                                <Button variant="ghost" className="w-full" asChild>
-                                    <Link href={`/decks/${deckId}/study/quest?new=true`}>
-                                        <RefreshCw className="mr-2 h-4 w-4" />
-                                        Restart Mission
-                                    </Link>
-                                </Button>
-                            </>
-                        ) : (
-                            <Button className="w-full" asChild>
-                                <Link href={`/decks/${deckId}/study/quest`}>Begin Mission</Link>
-                            </Button>
-                        )}
-                    </MissionCard>
-                    <MissionCard
-                        icon={Shuffle}
-                        title="Operation: Random Remix"
-                        description="A chaotic encounter. All intel is randomized."
-                    >
-                         {hasStartedRemix ? (
-                             <Button className="w-full" asChild>
-                                <Link href={`/decks/${deckId}/study/random-remix`}>Continue Mission</Link>
-                            </Button>
-                         ) : (
-                             <Button className="w-full" asChild>
-                                <Link href={`/decks/${deckId}/study/random-remix`}>Begin Mission</Link>
-                            </Button>
-                         )}
-                    </MissionCard>
-                    <MissionCard
-                        icon={Target}
-                        title="Operation: Target Practice"
-                        description="Hone your skills by focusing on known weak points."
-                    >
-                         <Button className="w-full" asChild>
-                            <Link href={`/decks/${deckId}/study/practice`}>Engage Targets</Link>
-                        </Button>
-                    </MissionCard>
-                     <MissionCard
-                        icon={Star}
-                        title="Operation: Starred Assets"
-                        description="Review high-value intel you've personally marked."
-                    >
-                         <Button className="w-full" asChild>
-                            <Link href={`/decks/${deckId}/study/starred`}>Review Starred</Link>
-                        </Button>
-                    </MissionCard>
-                     <MissionCard
-                        icon={Timer}
-                        title="Operation: Timed Drill"
-                        description="A high-pressure speed trial. Answer before the clock runs out."
-                    >
-                         <Button className="w-full" asChild>
-                           <Link href={`/decks/${deckId}/study/timed`}>Start Drill</Link>
-                        </Button>
-                    </MissionCard>
-                     <MissionCard
-                        icon={BookOpen}
-                        title="Operation: Level Up"
-                        description="Advance your clearance one cognitive level at a time."
-                    >
-                         <Button className="w-full" asChild>
-                            <Link href={`/decks/${deckId}/study/level-up`}>Enter Level-Up</Link>
-                        </Button>
-                    </MissionCard>
-                    <MissionCard
-                        icon={Rocket}
-                        title="Operation: Topic Trek"
-                        description="Infiltrate specific subjects by topic tag."
-                    >
-                         <Button className="w-full" asChild>
-                            <Link href={`/decks/${deckId}/study/topic-trek`}>Explore Topics</Link>
-                        </Button>
-                    </MissionCard>
-                </div>
+                 <motion.div
+                    variants={{ show: { transition: { staggerChildren: 0.06 } } }}
+                    initial="hidden"
+                    animate="show"
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                    style={{ perspective: 1000 }}
+                 >
+                    {missions.map(m => (
+                        <motion.div
+                            key={m.id}
+                            variants={{ hidden:{opacity:0,y:8}, show:{opacity:1,y:0} }}
+                        >
+                            <MissionCard
+                                icon={m.icon}
+                                title={m.title}
+                                description={m.description}
+                            >
+                                {m.children}
+                            </MissionCard>
+                        </motion.div>
+                    ))}
+                </motion.div>
             </div>
         </main>
     )

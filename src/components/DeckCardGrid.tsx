@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -6,22 +5,21 @@ import type { Deck as StitchDeck, DeckSummary } from "@/stitch/types";
 import { Pencil, Trash2, BookOpen } from "lucide-react";
 import { Button } from "./ui/button";
 
-// Local types for the status row (no new deps)
 type BloomLevel = "Remember" | "Understand" | "Apply" | "Analyze" | "Evaluate" | "Create";
 type DeckProgress = { percent: number; bloomLevel: BloomLevel } | undefined;
 
-export function DeckGrid({ decks }: { decks: (StitchDeck | DeckSummary & { progress?: DeckProgress })[] }) {
-  const handleDelete = (deckId: string) => {
-    alert(`Delete action for deck ${deckId}`);
-  };
-
-  const levelTint: Record<Exclude<BloomLevel, undefined>, string> = {
+export function DeckCardGrid({ decks }: { decks: (StitchDeck | DeckSummary & { progress?: DeckProgress })[] }) {
+  const levelTint: Record<BloomLevel, string> = {
     Remember: "bg-blue-50 text-blue-700",
     Understand: "bg-cyan-50 text-cyan-700",
     Apply: "bg-emerald-50 text-emerald-700",
     Analyze: "bg-amber-50 text-amber-700",
     Evaluate: "bg-violet-50 text-violet-700",
     Create: "bg-pink-50 text-pink-700",
+  };
+
+  const handleDelete = (deckId: string) => {
+    alert(`Delete action for deck ${deckId}`);
   };
 
   return (
@@ -32,12 +30,12 @@ export function DeckGrid({ decks }: { decks: (StitchDeck | DeckSummary & { progr
         const pct = Math.max(0, Math.min(100, progress?.percent ?? 0));
 
         return (
-          <div key={d.id} className="group perspective-1000 block">
+          <div key={(d as any).id} className="group perspective-1000 block">
             <div className="relative w-full aspect-[3/4] bg-white rounded-xl shadow-md transition-all duration-500 group-hover:shadow-xl group-hover:-translate-y-2 flex flex-col justify-between">
               <div className="flex-grow flex flex-col justify-center items-center p-4 text-center">
                 <p className="text-lg font-semibold text-center text-gray-700">{title}</p>
 
-                {/* STATUS ROW — under title; preserves height even when no progress */}
+                {/* STATUS ROW — compact, under title; keep height stable */}
                 <div className="mt-3 w-full max-w-[80%] space-y-2">
                   {progress && (
                     <div className="flex justify-center">
@@ -60,13 +58,13 @@ export function DeckGrid({ decks }: { decks: (StitchDeck | DeckSummary & { progr
 
               <div className="p-2 border-t border-gray-100 space-y-2">
                 <Button asChild className="w-full opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Link href={`/decks/${d.id}/study`}>
+                  <Link href={`/decks/${(d as any).id}/study`}>
                     <BookOpen className="mr-2 h-4 w-4" />
                     Study
                   </Link>
                 </Button>
                 <div className="flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Link href={`/decks/${d.id}/edit`} passHref>
+                  <Link href={`/decks/${(d as any).id}/edit`} passHref>
                     <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-blue-100 hover:text-blue-600">
                       <Pencil className="h-4 w-4" />
                     </Button>
