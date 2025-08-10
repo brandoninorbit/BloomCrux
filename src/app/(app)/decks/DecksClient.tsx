@@ -25,7 +25,9 @@ import {
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, where, orderBy, Timestamp } from "firebase/firestore";
+import { collection, onSnapshot, query, where, orderBy, Timestamp, addDoc, serverTimestamp } from "firebase/firestore";
+import { useGuestFolders } from "@/stores/useGuestFolders";
+
 
 type DeckWithProgress = DeckSummary & {
   progress?: {
@@ -36,6 +38,23 @@ type DeckWithProgress = DeckSummary & {
   updatedAt?: number; // For sorting recents
 };
 
+type FolderDoc = {
+  ownerId: string;
+  name: string;
+  color: string;
+  createdAt?: Timestamp | null;
+  setCount?: number;
+};
+
+type UiFolder = {
+  id: string;
+  name: string;
+  color: string;
+  setCount: number;
+  createdAtMs: number; // normalized for sorting/display
+};
+
+
 /** Local, file-scoped mocks (used only when logged out) */
 const MOCK_DECKS: DeckWithProgress[] = [
   { id: "m1", name: "Biology 101", progress: { percent: 34, bloomLevel: "Understand" }, folderId: "f1", updatedAt: Date.now() - 10000 },
@@ -44,12 +63,6 @@ const MOCK_DECKS: DeckWithProgress[] = [
   { id: "m4", name: "Organic Chemistry", progress: { percent: 0, bloomLevel: "Remember" }, folderId: "f1", updatedAt: Date.now() - 40000 },
   { id: "m5", name: "Anatomy", progress: { percent: 95, bloomLevel: "Evaluate" }, folderId: "f1", updatedAt: Date.now() - 50000 },
   { id: "m6", name: "Intro to Physics", progress: { percent: 22, bloomLevel: "Apply" }, folderId: "f1", updatedAt: Date.now() - 60000 },
-];
-
-const MOCK_FOLDERS: FolderSummary[] = [
-  { id: "f1", name: "Science", setCount: 4, color: 'blue' },
-  { id: "f2", name: "Languages", setCount: 1, color: 'green' },
-  { id: "f3", name: "Humanities", setCount: 1, color: 'yellow' },
 ];
 
 
@@ -66,7 +79,7 @@ function colorToClass(color: string = "blue") {
   }
 }
 
-function FolderCard({ folder, onEdit, onClick }: { folder: FolderSummary, onEdit: (e: React.MouseEvent) => void, onClick: () => void }) {
+function FolderCard({ folder, onEdit, onClick }: { folder: UiFolder, onEdit: (e: React.MouseEvent) => void, onClick: () => void }) {
   return (
     <div
       onClick={onClick}
@@ -117,14 +130,19 @@ function SkeletonRow() {
 
 
 export default function DecksClient() {
-  const { user } = useUserAuth(); // null when logged out
+  const { user } = useUserAuth();
   const [decks, setDecks] = useState<DeckWithProgress[] | null>(null);
-  const [folders, setFolders] = useState<FolderSummary[] | null>(null);
-  const [editingFolder, setEditingFolder] = useState<FolderSummary | null>(null);
+  
+  const [editingFolder, setEditingFolder] = useState<UiFolder | null>(null);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const router = useRouter();
   const folderGridRef = useRef<HTMLDivElement>(null);
   const deckGridRef = useRef<HTMLDivElement>(null);
+
+  // --- folder state ---
+  const [folders, setFolders] = useState<UiFolder[] | null>(null);
+  const guestFolders = useGuestFolders((s) => s.folders);
+  const addGuestFolder = useGuestFolders((s) => s.addFolder);
 
   // --- state & selectors for folder view ---
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -150,30 +168,36 @@ export default function DecksClient() {
 
 
   useEffect(() => {
-    if (!user) {
-      // Logged out: show mocks, not real fetch
+    if (!user?.uid) {
+      // Guest mode
       setDecks(MOCK_DECKS);
-      setFolders(MOCK_FOLDERS);
+      const ui = guestFolders.map((g) => ({
+        id: g.id, name: g.name, color: g.color, createdAtMs: g.createdAt, setCount: 0,
+      }));
+      setFolders(ui);
       return;
     }
     
-    // Real-time folder listener
+    // Signed-in mode (real time for folders)
     const q = query(
       collection(db, "users", user.uid, "folders"),
       orderBy("createdAt", "desc")
     );
     const unsub = onSnapshot(q, (snap) => {
-      const items: FolderSummary[] = snap.docs.map((d) => {
-        const data = d.data();
+      const items: UiFolder[] = snap.docs.map((d) => {
+        const data = d.data() as FolderDoc;
         return {
           id: d.id,
           name: data.name,
           color: data.color,
           setCount: data.setCount || 0,
-          updatedAt: (data.updatedAt as Timestamp)?.toMillis() ?? Date.now(),
+          createdAtMs: (data.createdAt as Timestamp)?.toMillis() ?? 0,
         };
       });
       setFolders(items);
+    }, (err) => {
+        console.error("folders onSnapshot error", err);
+        setFolders([]); // fail closed
     });
 
     // One-time deck fetch
@@ -193,15 +217,15 @@ export default function DecksClient() {
     })();
     
     return () => unsub();
-  }, [user, folders]);
+  }, [user?.uid, guestFolders]);
 
-  const handleUpdateFolder = (updatedFolder: FolderSummary) => {
+  const handleUpdateFolder = (updatedFolder: UiFolder) => {
     setFolders(currentFolders => 
         (currentFolders ?? []).map(f => f.id === updatedFolder.id ? updatedFolder : f)
     );
   };
   
-  const handleCreateFolder = (newFolder: FolderSummary) => {
+  const handleCreateFolder = (newFolder: UiFolder) => {
     setFolders(currentFolders => [...(currentFolders ?? []), newFolder]);
   };
   
@@ -300,7 +324,7 @@ export default function DecksClient() {
                     ))}
                   </motion.div>
               ) : (
-                <p className="text-muted-foreground">{user ? "No folders created yet." : ""}</p>
+                <p className="text-muted-foreground">{user ? "No folders created yet." : "No folders yet. Create one to get started!"}</p>
               )}
             </section>
 
@@ -309,12 +333,12 @@ export default function DecksClient() {
       </div>
       {editingFolder && (
         <EditFolderDialog
-          folder={editingFolder}
+          folder={editingFolder as unknown as FolderSummary}
           open={!!editingFolder}
           onOpenChange={(isOpen) => !isOpen && setEditingFolder(null)}
           onUpdated={(updated) => {
-            handleUpdateFolder(updated);
-            setEditingFolder(updated); // Keep dialog open with new data
+            handleUpdateFolder(updated as unknown as UiFolder);
+            setEditingFolder(updated as unknown as UiFolder); // Keep dialog open with new data
           }}
         />
       )}
