@@ -4,7 +4,7 @@
 import { useEffect, useState, useRef } from "react";
 import autoAnimate from "@formkit/auto-animate";
 import { useUserAuth } from "@/context/AuthContext";
-import { getUserDecks, getUserFolders } from "@/adapters/decks";
+import { getUserDecks } from "@/adapters/decks";
 import type { DeckSummary, FolderSummary, BloomLevel } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Loader2, Pencil } from "lucide-react";
@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, query, where, orderBy, Timestamp } from "firebase/firestore";
 
 type DeckWithProgress = DeckSummary & {
   progress?: {
@@ -154,27 +156,44 @@ export default function DecksClient() {
       setFolders(MOCK_FOLDERS);
       return;
     }
-    // Logged in: load real data
-    setDecks(null); setFolders(null);
+    
+    // Real-time folder listener
+    const q = query(
+      collection(db, "users", user.uid, "folders"),
+      orderBy("createdAt", "desc")
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const items: FolderSummary[] = snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          name: data.name,
+          color: data.color,
+          setCount: data.setCount || 0,
+          updatedAt: (data.updatedAt as Timestamp)?.toMillis() ?? Date.now(),
+        };
+      });
+      setFolders(items);
+    });
+
+    // One-time deck fetch
+    setDecks(null);
     (async () => {
-      const [d, f] = await Promise.all([
-        getUserDecks(user.uid),
-        getUserFolders(user.uid),
-      ]);
-      // TODO: Fetch real progress data and map it here
+      const d = await getUserDecks(user.uid);
       const decksWithMockProgress = d.map((deck, i) => ({
         ...deck,
         progress: {
           percent: (i * 20 + 5) % 100,
           bloomLevel: (['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'] as BloomLevel[])[i % 6]
         },
-        folderId: f[i % f.length]?.id, // Assign to a mock folder
+        folderId: folders?.[i % (folders?.length || 1)]?.id,
         updatedAt: Date.now() - (i * 10000)
       }));
-      setDecks(decksWithMockProgress); 
-      setFolders(f);
+      setDecks(decksWithMockProgress);
     })();
-  }, [user]);
+    
+    return () => unsub();
+  }, [user, folders]);
 
   const handleUpdateFolder = (updatedFolder: FolderSummary) => {
     setFolders(currentFolders => 
