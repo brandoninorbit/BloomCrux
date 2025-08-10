@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { getUserCustomizations } from '@/lib/firestore';
 import { avatarFrames } from '@/config/avatarFrames';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { motion } from 'framer-motion';
 
 interface AgentCardProps {
     className?: string;
@@ -69,10 +70,28 @@ export default function AgentCard({ className, globalProgress, settings, photoUR
     const activeFrameData = customizations?.activeAvatarFrame ? avatarFrames[customizations.activeAvatarFrame] : null;
 
     const ActiveFrame = () => {
-        if (!activeFrameData || customizations?.activeAvatarFrame === 'default') {
-            return null;
+        if (!activeFrameData || customizations?.activeAvatarFrame === 'default' || activeFrameData.animationType !== 'pulse') {
+            return activeFrameData ? <div className={cn("absolute inset-[-4px] pointer-events-none rounded-full", activeFrameData.className)} /> : null;
         }
-        return <div className={cn("absolute inset-[-4px] pointer-events-none rounded-full", activeFrameData.className)} />;
+
+        return (
+            <motion.div
+                className={cn("absolute inset-[-4px] pointer-events-none rounded-full", activeFrameData.className)}
+                animate={{
+                    scale: [1, 1.05, 1],
+                    opacity: [0.7, 1, 0.7],
+                }}
+                transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    repeatType: 'reverse',
+                    ease: "easeInOut",
+                }}
+                style={{
+                    boxShadow: `0 0 12px 4px ${activeFrameData.color}`,
+                }}
+            />
+        );
     };
     
     // Determine which icon to use for the next unlock

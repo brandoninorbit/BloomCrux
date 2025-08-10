@@ -27,6 +27,7 @@ import { useUserSettings } from '@/hooks/useUserSettings';
 import { avatarFrames } from '@/config/avatarFrames';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useNavigationLoader } from '@/hooks/useNavigationLoader';
+import { motion } from 'framer-motion';
 
 export function Header() {
   const pathname = usePathname();
@@ -65,10 +66,28 @@ export function Header() {
   const activeFrameData = customizations?.activeAvatarFrame ? avatarFrames[customizations.activeAvatarFrame] : null;
 
   const ActiveFrame = () => {
-    if (!activeFrameData || customizations?.activeAvatarFrame === 'default') {
-      return null;
+    if (!activeFrameData || customizations?.activeAvatarFrame === 'default' || activeFrameData.animationType !== 'pulse') {
+        return activeFrameData ? <div className={cn("absolute inset-0 pointer-events-none rounded-full", activeFrameData.className)} /> : null;
     }
-    return <div className={cn("absolute inset-0 pointer-events-none rounded-full", activeFrameData.className)} />;
+
+    return (
+        <motion.div
+            className={cn("absolute inset-0 pointer-events-none rounded-full", activeFrameData.className)}
+            animate={{
+                scale: [1, 1.1, 1],
+                opacity: [0.7, 1, 0.7],
+            }}
+            transition={{
+                duration: 2,
+                repeat: Infinity,
+                repeatType: 'reverse',
+                ease: "easeInOut",
+            }}
+            style={{
+                boxShadow: `0 0 10px 3px ${activeFrameData.color}`,
+            }}
+        />
+    );
   };
   
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
