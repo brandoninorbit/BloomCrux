@@ -230,6 +230,12 @@ export default function DecksClient() {
   };
   
   const handleNewSetClick = () => {
+    if (!user && (folders ?? []).length === 0) {
+        // Guest user with no folders - prompt to create one first.
+        router.push('/decks/folders/new');
+        return;
+    }
+
     if (folders && folders.length > 0 && !selectedFolder) {
       setShowFolderDialog(true);
     } else {
@@ -272,11 +278,8 @@ export default function DecksClient() {
                       Back to Recent
                     </Button>
                   )}
-                  {selectedFolder ? (
-                    <Button onClick={handleNewSetClick}>New Set</Button>
-                  ) : (
-                    <Button variant="secondary" onClick={handleNewSetClick}>New Set</Button>
-                  )}
+                  {/* "New Set" is always available now */}
+                  <Button variant={selectedFolder ? "default" : "secondary"} onClick={handleNewSetClick}>New Set</Button>
                   <Button asChild><Link href="/decks/folders/new">New Folder</Link></Button>
                 </div>
               </div>
@@ -292,7 +295,7 @@ export default function DecksClient() {
                     <DeckCardGrid decks={visibleDecks} />
                  </motion.div>
               ) : (
-                <p className="text-muted-foreground">{user ? "No recent decks." : ""}</p>
+                <p className="text-muted-foreground">{user ? "No recent decks." : "No recent decks."}</p>
               )}
             </section>
 

@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useGuestFolders } from "@/stores/useGuestFolders";
 
 const COLORS: FolderColor[] = ["blue", "green", "yellow", "purple", "pink", "orange", "gray"];
 
@@ -35,6 +36,7 @@ export default function NewFolderPage({
   const { user } = useUserAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const addGuestFolder = useGuestFolders((s) => s.addFolder);
 
   const [name, setName] = useState("");
   const [color, setColor] = useState<FolderColor>("blue");
@@ -52,25 +54,12 @@ export default function NewFolderPage({
     setError(null);
 
     try {
-      let newFolder: FolderSummary;
       if (user) {
-        newFolder = await createFolder(user.uid, { name: name.trim(), color });
+        const newFolder = await createFolder(user.uid, { name: name.trim(), color });
+        if (onCreate) onCreate(newFolder);
       } else {
-        // Logged-out user: create a temporary mock folder
-        newFolder = {
-          id: `mock_${Date.now()}`,
-          name: name.trim(),
-          color: color,
-          setCount: 0,
-          updatedAt: new Date(),
-        };
-        // NOTE: In a real app, you'd use a more robust state management
-        // to pass this back to the previous page. For testing, we'll
-        // just show a success message and redirect. The item will not persist.
-      }
-      
-      if (onCreate) {
-        onCreate(newFolder);
+        // Logged-out user: use the zustand store
+        addGuestFolder({ name: name.trim(), color });
       }
       
       toast({ title: "Folder created!", description: `The "${name.trim()}" folder has been added.` });
