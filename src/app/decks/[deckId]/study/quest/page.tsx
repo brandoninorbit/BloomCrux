@@ -106,6 +106,11 @@ export default function QuestPage() {
           deckId,
           fetchCardsByLevel: (lvl) => getCardsForDeckByBloomLevel(user.uid, deckId, lvl)
       });
+      
+      if (!isQuestSession(updatedSession)) {
+          setLoading(false);
+          return;
+      }
 
       const order = updatedSession.progressByLevel[updatedSession.currentLevel] ?? [];
       const cardId = order[updatedSession.currentIndex];
@@ -174,6 +179,11 @@ export default function QuestPage() {
         deckId,
         fetchCardsByLevel: (lvl) => getCardsForDeckByBloomLevel(user.uid, deckId, lvl)
      });
+    
+    if (!isQuestSession(updatedSession)) {
+        setChecking(false);
+        return;
+    }
 
     const order = updatedSession.progressByLevel[updatedSession.currentLevel] ?? [];
     const cardId = order[updatedSession.currentIndex];
@@ -202,7 +212,7 @@ export default function QuestPage() {
     );
   }
 
-  if (!currentCard) {
+  if (!currentCard || !isQuestSession(session)) {
      return (
         <MissionComplete
             modeName="Quest"

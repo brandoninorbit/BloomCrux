@@ -49,7 +49,7 @@ export default function MissionComplete({
   useEffect(() => {
     // Only run confetti if the component is being rendered for a real scenario
     // (i.e., not a dev preview page) or if explicitly enabled.
-    const isDevPreview = window.location.pathname.includes('/dev/');
+    const isDevPreview = typeof window !== 'undefined' && window.location.pathname.includes('/dev/');
     if (!isDevPreview || process.env.NEXT_PUBLIC_DEV_UI === "1") {
       confetti({ particleCount: 80, spread: 65, origin: { y: 0.7 } });
     }
