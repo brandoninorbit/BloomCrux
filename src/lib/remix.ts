@@ -2,9 +2,9 @@
 'use client';
 
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import {db, getDb} from "@/lib/firebase";
 import { deterministicShuffle } from "@/lib/utils/shuffle";
-import type { Flashcard } from "@/types";
+import type { Flashcard, RemixSession } from "@/types";
 
 export async function getOrCreateRemixSession(opts: {
   uid: string,
@@ -12,9 +12,9 @@ export async function getOrCreateRemixSession(opts: {
   fetchAllCardsInDeck: (deckId: string) => Promise<Flashcard[]>
 }) : Promise<RemixSession> {
   const { uid, deckId, fetchAllCardsInDeck } = opts;
-  const ref = doc(db, "users", uid, "remixSessions", deckId);
+  const ref = doc(getDb(), "users", uid, "remixSessions", deckId);
   const snap = await getDoc(ref);
-  if (snap.exists()) return { id: ref.id, ...snap.data() };
+  if (snap.exists()) return { id: ref.id, ...(snap.data() as Omit<RemixSession,'id'>) };
 
   const cards = await fetchAllCardsInDeck(deckId);
   const order = deterministicShuffle(cards.map(c => c.id), `${uid}:${deckId}:remix`);
@@ -32,7 +32,7 @@ export async function getOrCreateRemixSession(opts: {
 }
 
 export async function advanceRemix(uid: string, deckId: string) {
-  const ref = doc(db, "users", uid, "remixSessions", deckId);
+  const ref = doc(getDb(), "users", uid, "remixSessions", deckId);
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
   const s = snap.data() as any;

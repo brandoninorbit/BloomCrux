@@ -25,7 +25,7 @@ import {
 import type { GlobalProgress as AppGlobalProgress, SelectedCustomizations, BloomLevel, Flashcard } from "@/types";
 import type { Topic as StitchTopic, UserDeckProgress } from "@/stitch/types";
 import { onSnapshot, query, collection, where, doc, getDocs, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase"; // make sure this path is correct
+import {db, getDb} from "@/lib/firebase"; // make sure this path is correct
 
 /** Fix: typed wrapper so global always matches our app's type */
 export async function getUserProgress(uid: string) {
@@ -56,7 +56,7 @@ export function getUserCustomizations(
   onSnap: (c: SelectedCustomizations | null) => void
 ): () => void {
   // FIX: Path was pointing to a document, so use doc() instead of collection()
-  const docRef = doc(db, "users", uid, "customizations", "selected");
+  const docRef = doc(getDb(), "users", uid, "customizations", "selected");
   return onSnapshot(docRef, (doc) => {
     if (doc.exists()) {
       onSnap(doc.data() as SelectedCustomizations);
@@ -75,7 +75,7 @@ export function getUserCustomizations(
  */
 export async function getCardsForDeckByBloomLevel(uid: string, deckId: string, level: BloomLevel): Promise<Flashcard[]> {
     const cardsQuery = query(
-        collection(db, 'userTopics', uid, 'decks', deckId, 'cards'),
+        collection(getDb(), 'userTopics', uid, 'decks', deckId, 'cards'),
         where('bloomLevel', '==', level)
     );
     const cardsSnap = await getDocs(cardsQuery);
@@ -89,7 +89,7 @@ export async function getCardsForDeckByBloomLevel(uid: string, deckId: string, l
  * @returns A promise that resolves to an array of all Flashcard objects in the deck.
  */
 export async function getAllCardsForDeck(uid: string, deckId: string): Promise<Flashcard[]> {
-    const cardsColRef = collection(db, 'userTopics', uid, 'decks', deckId, 'cards');
+    const cardsColRef = collection(getDb(), 'userTopics', uid, 'decks', deckId, 'cards');
     const cardsSnap = await getDocs(cardsColRef);
     return cardsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Flashcard));
 }
@@ -103,7 +103,7 @@ export async function getAllCardsForDeck(uid: string, deckId: string): Promise<F
  * @returns A promise that resolves to the Flashcard object, or null if not found.
  */
 export async function getCardById(uid: string, deckId: string, cardId: string): Promise<Flashcard | null> {
-    const cardRef = doc(db, 'userTopics', uid, 'decks', deckId, 'cards', cardId);
+    const cardRef = doc(getDb(), 'userTopics', uid, 'decks', deckId, 'cards', cardId);
     const cardSnap = await getDoc(cardRef);
     if (cardSnap.exists()) {
         return { id: cardSnap.id, ...cardSnap.data() } as Flashcard;

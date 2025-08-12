@@ -68,7 +68,7 @@ function sanitizeForFirestore<T>(obj: T): T {
  */
 export async function getTopics(userId: string): Promise<Topic[]> {
     const db = getDb();
-    const userTopicsDocRef = doc(db, 'userTopics', userId);
+    const userTopicsDocRef = doc(getDb(), 'userTopics', userId);
     const docSnap = await getDoc(userTopicsDocRef);
 
     if (docSnap.exists()) {
@@ -96,7 +96,7 @@ export async function getTopics(userId: string): Promise<Topic[]> {
  */
 export async function getDeck(userId: string, deckId: string): Promise<Deck | null> {
     const db = getDb();
-    const userTopicsDocRef = doc(db, 'userTopics', userId);
+    const userTopicsDocRef = doc(getDb(), 'userTopics', userId);
     const docSnap = await getDoc(userTopicsDocRef);
 
     if (docSnap.exists()) {
@@ -105,7 +105,7 @@ export async function getDeck(userId: string, deckId: string): Promise<Deck | nu
             const foundDeck = topic.decks.find((d: Deck) => d.id === deckId);
             if (foundDeck) {
                 // Fetch cards for the specific deck
-                const cardsQuery = query(collection(db, 'userTopics', userId, 'decks', deckId, 'cards'));
+                const cardsQuery = query(collection(getDb(), 'userTopics', userId, 'decks', deckId, 'cards'));
                 const cardsSnap = await getDocs(cardsQuery);
                 foundDeck.cards = cardsSnap.docs.map(doc => ({
                     id: doc.id,
@@ -125,7 +125,7 @@ export async function getDeck(userId: string, deckId: string): Promise<Deck | nu
  */
 export async function saveDeck(userId: string, updatedDeck: Deck): Promise<void> {
     const db = getDb();
-    const userTopicsDocRef = doc(db, 'userTopics', userId);
+    const userTopicsDocRef = doc(getDb(), 'userTopics', userId);
 
     try {
         await runTransaction(db, async (transaction) => {
@@ -176,7 +176,7 @@ export async function saveDeck(userId: string, updatedDeck: Deck): Promise<void>
  */
 export async function saveTopics(userId: string, topics: Topic[]): Promise<void> {
     const db = getDb();
-    const userTopicsDocRef = doc(db, 'userTopics', userId);
+    const userTopicsDocRef = doc(getDb(), 'userTopics', userId);
     
     // Create a deep copy to avoid modifying the original state object
     const topicsToSave = JSON.parse(JSON.stringify(topics));
@@ -190,7 +190,7 @@ export async function saveTopics(userId: string, topics: Topic[]): Promise<void>
                 if (deck.cards && deck.cards.length > 0) {
                     for (const card of deck.cards) {
                         const { id, ...cardData } = card;
-                        const cardRef = doc(db, 'userTopics', userId, 'decks', deck.id, 'cards', String(id));
+                        const cardRef = doc(getDb(), 'userTopics', userId, 'decks', deck.id, 'cards', String(id));
                         batch.set(cardRef, sanitizeForFirestore(cardData));
                     }
                 }
@@ -235,17 +235,17 @@ export async function logCardAttempt(
     await runTransaction(db, async (transaction) => {
       const { deckId, cardId, bloomLevel } = attemptData;
       
-      const userTopicsDocRef = doc(db, 'userTopics', userId);
-      const userSettingsDocRef = doc(db, 'users', userId);
-      const deckProgressDocRef = doc(db, 'userProgress', userId, 'decks', deckId);
-      const globalProgressDocRef = doc(db, 'userProgress', userId);
-      const xpStatsDocRef = doc(db, 'users', userId, 'xpStats', 'stats');
-      const cardsInDeckQuery = query(collection(db, 'userTopics', userId, 'decks', deckId, 'cards'));
-      const customizationsDocRef = doc(db, 'users', userId, 'customizations', 'unlocked');
-      const selectedCustomizationsDocRef = doc(db, 'users', userId, 'customizations', 'selected');
+      const userTopicsDocRef = doc(getDb(), 'userTopics', userId);
+      const userSettingsDocRef = doc(getDb(), 'users', userId);
+      const deckProgressDocRef = doc(getDb(), 'userProgress', userId, 'decks', deckId);
+      const globalProgressDocRef = doc(getDb(), 'userProgress', userId);
+      const xpStatsDocRef = doc(getDb(), 'users', userId, 'xpStats', 'stats');
+      const cardsInDeckQuery = query(collection(getDb(), 'userTopics', userId, 'decks', deckId, 'cards'));
+      const customizationsDocRef = doc(getDb(), 'users', userId, 'customizations', 'unlocked');
+      const selectedCustomizationsDocRef = doc(getDb(), 'users', userId, 'customizations', 'selected');
 
       const cardAttemptsQuery = query(
-        collection(db, 'cardAttempts'),
+        collection(getDb(), 'cardAttempts'),
         where("userId", "==", userId),
         where("cardId", "==", cardId),
         orderBy("timestamp", "desc")
@@ -279,7 +279,7 @@ export async function logCardAttempt(
       let customizations = (customizationsDoc.exists() ? customizationsDoc.data() : { avatarFrames: [] }) as UserCustomizations;
 
 
-      const newAttemptRef = doc(collection(db, 'cardAttempts'));
+      const newAttemptRef = doc(collection(getDb(), 'cardAttempts'));
       transaction.set(newAttemptRef, { ...attemptData, userId, timestamp: serverTimestamp() });
 
       if (attemptData.wasCorrect) {
@@ -385,7 +385,7 @@ export async function logCardAttempt(
         }
         
         if (targetDeck && !targetDeck.isMastered && deckJustLeveledUp) {
-          const deckAttemptsQuery = query(collection(db, 'cardAttempts'), where("userId", "==", userId), where("deckId", "==", deckId));
+          const deckAttemptsQuery = query(collection(getDb(), 'cardAttempts'), where("userId", "==", userId), where("deckId", "==", deckId));
           const allDeckAttemptsSnapshot = await getDocs(deckAttemptsQuery);
           const allAttempts: CardAttempt[] = allDeckAttemptsSnapshot.docs.map(d => d.data() as CardAttempt);
           allAttempts.push({ ...attemptData, userId, timestamp: new Date() } as CardAttempt);
@@ -462,7 +462,7 @@ export async function logCardAttempt(
  */
 export async function getDeckProgress(userId: string): Promise<CardAttempt[]> {
   const db = getDb();
-  const attemptsRef = collection(db, "cardAttempts");
+  const attemptsRef = collection(getDb(), "cardAttempts");
   const q = query(attemptsRef, where("userId", "==", userId));
   
   const querySnapshot = await getDocs(q);
@@ -489,7 +489,7 @@ export async function getDeckProgress(userId: string): Promise<CardAttempt[]> {
  */
 export async function getUserDeckProgress(userId: string, deckId: string): Promise<UserDeckProgress | null> {
     const db = getDb();
-    const progressDocRef = doc(db, 'userProgress', userId, 'decks', deckId);
+    const progressDocRef = doc(getDb(), 'userProgress', userId, 'decks', deckId);
     const docSnap = await getDoc(progressDocRef);
     if (docSnap.exists()) {
         const data = docSnap.data();
@@ -514,9 +514,9 @@ export async function getUserDeckProgress(userId: string, deckId: string): Promi
  */
 export async function getUserProgress(userId: string): Promise<{ global: GlobalProgress, decks: { [deckId: string]: UserDeckProgress & Pick<Deck, 'title' | 'isMastered' | 'totalCards' | 'deckName'> } }> {
     const db = getDb();
-    const userProgressRef = doc(db, 'userProgress', userId);
-    const decksProgressColRef = collection(db, 'userProgress', userId, 'decks');
-    const userTopicsDocRef = doc(db, 'userTopics', userId);
+    const userProgressRef = doc(getDb(), 'userProgress', userId);
+    const decksProgressColRef = collection(getDb(), 'userProgress', userId, 'decks');
+    const userTopicsDocRef = doc(getDb(), 'userTopics', userId);
 
     const [globalSnap, decksSnap, topicsSnap] = await Promise.all([
         getDoc(userProgressRef),
@@ -560,7 +560,7 @@ export async function getUserProgress(userId: string): Promise<{ global: GlobalP
  */
 export async function saveUserDeckProgress(userId: string, deckId: string, progress: Partial<UserDeckProgress>): Promise<void> {
     const db = getDb();
-    const progressDocRef = doc(db, 'userProgress', userId, 'decks', deckId);
+    const progressDocRef = doc(getDb(), 'userProgress', userId, 'decks', deckId);
     const sanitizedProgress = sanitizeForFirestore(progress);
     await setDoc(progressDocRef, sanitizedProgress, { merge: true });
 }
@@ -572,7 +572,7 @@ export async function saveUserDeckProgress(userId: string, deckId: string, progr
  */
 export async function getUserXpStats(userId: string): Promise<UserXpStats | null> {
     const db = getDb();
-    const statsDocRef = doc(db, 'users', userId, 'xpStats', 'stats'); // Use a consistent doc ID
+    const statsDocRef = doc(getDb(), 'users', userId, 'xpStats', 'stats'); // Use a consistent doc ID
     const docSnap = await getDoc(statsDocRef);
     if (!docSnap.exists()) return null;
     const data = docSnap.data();
@@ -590,7 +590,7 @@ export async function getUserXpStats(userId: string): Promise<UserXpStats | null
  */
 export async function saveUserXpStats(userId: string, stats: Partial<UserXpStats>): Promise<void> {
     const db = getDb();
-    const statsDocRef = doc(db, 'users', userId, 'xpStats', 'stats');
+    const statsDocRef = doc(getDb(), 'users', userId, 'xpStats', 'stats');
     const sanitizedStats = sanitizeForFirestore(stats);
     await setDoc(statsDocRef, sanitizedStats, { merge: true });
 }
@@ -605,7 +605,7 @@ export async function saveUserXpStats(userId: string, stats: Partial<UserXpStats
 export async function getDeckPurchaseCounts(uid: string, deckId: string): Promise<PurchaseCounts> {
     const db = getDb();
     const counts: PurchaseCounts = { 'hint': 0, 'retry': 0, 'fifty-fifty': 0, 'time': 0, 'focus': 0, 'unlock': 0 };
-    const powerUpsCollectionRef = collection(db, 'users', uid, 'purchases', deckId, 'powerUps');
+    const powerUpsCollectionRef = collection(getDb(), 'users', uid, 'purchases', deckId, 'powerUps');
     
     try {
         const querySnapshot = await getDocs(powerUpsCollectionRef);
@@ -630,8 +630,8 @@ export async function getDeckPurchaseCounts(uid: string, deckId: string): Promis
  */
 export async function purchasePowerUp(userId: string, deckId: string, powerUp: PowerUpType, cost: number): Promise<void> {
     const db = getDb();
-    const userSettingsDocRef = doc(db, 'users', userId);
-    const purchaseDocRef = doc(db, 'users', userId, 'purchases', deckId, 'powerUps', powerUp);
+    const userSettingsDocRef = doc(getDb(), 'users', userId);
+    const purchaseDocRef = doc(getDb(), 'users', userId, 'purchases', deckId, 'powerUps', powerUp);
 
     try {
         await runTransaction(db, async (transaction) => {
@@ -670,7 +670,7 @@ export async function purchasePowerUp(userId: string, deckId: string, powerUp: P
  */
 export async function resetDeckPurchaseCounts(userId: string, deckId: string): Promise<void> {
     const db = getDb();
-    const powerUpsCollectionRef = collection(db, 'users', userId, 'purchases', deckId, 'powerUps');
+    const powerUpsCollectionRef = collection(getDb(), 'users', userId, 'purchases', deckId, 'powerUps');
     
     try {
         const querySnapshot = await getDocs(powerUpsCollectionRef);
@@ -701,7 +701,7 @@ export async function getShopItems(deckId?: string): Promise<ShopItem[]> {
     
     if (deckId) {
         // In a real app, you would fetch from a subcollection like:
-        // const itemsRef = collection(db, 'decks', deckId, 'shopItems');
+        // const itemsRef = collection(getDb(), 'decks', deckId, 'shopItems');
         // const snapshot = await getDocs(itemsRef);
         // if (!snapshot.empty) {
         //     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ShopItem));
@@ -712,7 +712,7 @@ export async function getShopItems(deckId?: string): Promise<ShopItem[]> {
     
     // Fallback to global items
     // In a real app, you would fetch from:
-    // const globalItemsRef = collection(db, 'shopItems', 'global', 'items');
+    // const globalItemsRef = collection(getDb(), 'shopItems', 'global', 'items');
     // For this example, we return a hardcoded list.
     return Promise.resolve(GLOBAL_SHOP_ITEMS);
 }
@@ -726,7 +726,7 @@ export async function getShopItems(deckId?: string): Promise<ShopItem[]> {
  */
 export function getUserInventory(userId: string, onUpdate?: (inventory: UserInventory) => void): Promise<UserInventory> | Unsubscribe {
     const db = getDb();
-    const inventoryCollectionRef = collection(db, 'users', userId, 'inventory');
+    const inventoryCollectionRef = collection(getDb(), 'users', userId, 'inventory');
 
     const processSnapshot = (snapshot: any) => {
         const inventory: UserInventory = {};
@@ -764,8 +764,8 @@ export async function purchaseShopItem(userId: string, item: ShopItem): Promise<
     const db = getDb();
     const { id: itemId, cost } = item;
     
-    const userSettingsDocRef = doc(db, 'users', userId);
-    const inventoryItemRef = doc(db, 'users', userId, 'inventory', itemId);
+    const userSettingsDocRef = doc(getDb(), 'users', userId);
+    const inventoryItemRef = doc(getDb(), 'users', userId, 'inventory', itemId);
 
     try {
         await runTransaction(db, async (transaction) => {
@@ -801,7 +801,7 @@ export async function purchaseShopItem(userId: string, item: ShopItem): Promise<
  */
 export async function getUserCustomizations(userId: string): Promise<UserCustomizations> {
     const db = getDb();
-    const docRef = doc(db, 'users', userId, 'customizations', 'unlocked');
+    const docRef = doc(getDb(), 'users', userId, 'customizations', 'unlocked');
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
         return docSnap.data() as UserCustomizations;
@@ -816,7 +816,7 @@ export async function getUserCustomizations(userId: string): Promise<UserCustomi
  */
 export async function saveUserCustomizations(userId: string, customizations: UserCustomizations): Promise<void> {
     const db = getDb();
-    const docRef = doc(db, 'users', userId, 'customizations', 'unlocked');
+    const docRef = doc(getDb(), 'users', userId, 'customizations', 'unlocked');
     await setDoc(docRef, sanitizeForFirestore(customizations));
 }
 
@@ -827,7 +827,7 @@ export async function saveUserCustomizations(userId: string, customizations: Use
  */
 export async function getSelectedCustomizations(userId: string): Promise<SelectedCustomizations> {
     const db = getDb();
-    const docRef = doc(db, 'users', userId, 'customizations', 'selected');
+    const docRef = doc(getDb(), 'users', userId, 'customizations', 'selected');
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
         return docSnap.data() as SelectedCustomizations;
@@ -843,7 +843,7 @@ export async function getSelectedCustomizations(userId: string): Promise<Selecte
  */
 export async function saveSelectedCustomizations(userId: string, selections: Partial<SelectedCustomizations>): Promise<void> {
     const db = getDb();
-    const docRef = doc(db, 'users', userId, 'customizations', 'selected');
+    const docRef = doc(getDb(), 'users', userId, 'customizations', 'selected');
     await setDoc(docRef, sanitizeForFirestore(selections), { merge: true });
 }
 

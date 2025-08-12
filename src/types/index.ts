@@ -311,27 +311,24 @@ export interface ShopItem {
 }
 
 /** Session types for study modes */
-import type { FieldValue } from 'firebase/firestore';
-
-export interface QuestSession {
-  id: string;
+export type QuestSession = {
   deckId: string;
   levels: BloomLevel[];
   currentLevel: BloomLevel;
   currentIndex: number;
   progressByLevel: Record<BloomLevel, string[]>;
   completedLevels: BloomLevel[];
-  totalCards: number;
-  startedAt: FieldValue;
-  updatedAt: FieldValue;
-}
-
-export interface RemixSession {
+  startedAt: any;
+  updatedAt: any;
   id: string;
+};
+
+export type RemixSession = {
   deckId: string;
   order: string[];
   currentIndex: number;
   totalCards: number;
-  startedAt: FieldValue;
-  updatedAt: FieldValue;
-}
+  startedAt: any;
+  updatedAt: any;
+  id: string;
+};

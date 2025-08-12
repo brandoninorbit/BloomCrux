@@ -25,7 +25,7 @@ import { motion } from "framer-motion";
 
 // 🔥 Firestore live folders
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
-import { db } from "@/stitch/lib/firebase";
+import {db, getDb} from "@/lib/firebase";
 
 type DeckWithProgress = DeckSummary & {
   progress?: {
@@ -203,7 +203,7 @@ export default function DecksClient() {
     console.log("[folders:read] subscribe", user.uid);
 
     const q = query(
-      collection(db, "users", user.uid, "folders"),
+      collection(getDb(), "users", user.uid, "folders"),
       orderBy("createdAt", "desc")
     );
 

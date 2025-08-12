@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 import { useUserAuth } from "@/context/AuthContext";
-import { db } from "@/stitch/lib/firebase";
+import {db, getDb} from "@/lib/firebase";
 
 import type { FolderColor, FolderSummary } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -61,7 +61,7 @@ export default function NewFolderPage({
         console.log("[folders:create] start", { uid: user.uid, name: name.trim(), color });
 
         const ref = await addDoc(
-          collection(db, "users", user.uid, "folders"),
+          collection(getDb(), "users", user.uid, "folders"),
           {
             name: name.trim(),
             color,

@@ -1,8 +1,8 @@
 
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import {db, getDb} from "@/lib/firebase";
 import { deterministicShuffle } from "@/lib/utils/shuffle";
-import type { BloomLevel, Flashcard } from "@/types";
+import type { BloomLevel, Flashcard, QuestSession } from "@/types";
 
 const BLOOM_ORDER: BloomLevel[] = ["Remember","Understand","Apply","Analyze","Evaluate","Create"];
 
@@ -12,9 +12,9 @@ export async function getOrCreateQuestSession(opts: {
   fetchCardsByLevel: (level: BloomLevel) => Promise<Flashcard[]>
 }) : Promise<QuestSession> {
   const { uid, deckId, fetchCardsByLevel } = opts;
-  const ref = doc(db, "users", uid, "questSessions", deckId);
+  const ref = doc(getDb(), "users", uid, "questSessions", deckId);
   const snap = await getDoc(ref);
-  if (snap.exists()) return { id: ref.id, ...snap.data() };
+  if (snap.exists()) return { id: ref.id, ...(snap.data() as Omit<QuestSession,'id'>) };
 
   // Create session: only shuffle Remember now
   const rememberCards = await fetchCardsByLevel("Remember");
@@ -48,7 +48,7 @@ export async function ensureLevelOrder(opts: {
   fetchCardsByLevel: (level: BloomLevel) => Promise<Flashcard[]>
 }) {
   const { uid, deckId, level, fetchCardsByLevel } = opts;
-  const ref = doc(db, "users", uid, "questSessions", deckId);
+  const ref = doc(getDb(), "users", uid, "questSessions", deckId);
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error("Session missing");
   const data = snap.data() as any;
@@ -69,7 +69,7 @@ export async function ensureLevelOrder(opts: {
 export async function advance(opts: {
   uid: string, deckId: string
 }) {
-  const ref = doc(db, "users", opts.uid, "questSessions", opts.deckId);
+  const ref = doc(getDb(), "users", opts.uid, "questSessions", opts.deckId);
   const snap = await getDoc(ref);
   if(!snap.exists()) return;
   const s = snap.data() as any;
