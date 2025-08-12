@@ -309,3 +309,26 @@ export interface ShopItem {
     icon: string; // Lucide icon name
     type: 'power-up' | 'avatar-frame' | 'deck-cover' | 'theme';
 }
+
+/** Session types for study modes */
+export type QuestSession = {
+  deckId: string;
+  levels: BloomLevel[];
+  currentLevel: BloomLevel;
+  currentIndex: number;
+  progressByLevel: Record<BloomLevel, string[]>;
+  completedLevels: BloomLevel[];
+  startedAt: any;
+  updatedAt: any;
+  id: string;
+};
+
+export type RemixSession = {
+  deckId: string;
+  order: string[];
+  currentIndex: number;
+  totalCards: number;
+  startedAt: any;
+  updatedAt: any;
+  id: string;
+};

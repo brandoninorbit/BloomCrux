@@ -12,7 +12,7 @@ import { StudyCard } from "@/components/StudyCard";
 import { Loader2 } from "lucide-react";
 import MissionComplete from "@/components/MissionComplete";
 import { doc, deleteDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import {db, getDb} from "@/lib/firebase";
 
 export default function RandomRemixPage() {
   const { deckId } = useParams<{ deckId: string }>();
@@ -108,7 +108,7 @@ export default function RandomRemixPage() {
   const handleRestart = async () => {
     if (!user?.uid || !deckId) return;
     setLoading(true);
-    const sessionRef = doc(db, "users", user.uid, "remixSessions", deckId);
+    const sessionRef = doc(getDb(), "users", user.uid, "remixSessions", deckId);
     await deleteDoc(sessionRef);
     fetchSession();
   };

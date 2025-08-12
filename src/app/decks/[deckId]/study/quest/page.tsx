@@ -31,10 +31,11 @@ import {
 import { StudyMissionLayout } from '@/components/StudyMissionLayout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StudyCard } from '@/components/StudyCard';
-import { collection, getDocs, query, where, orderBy, deleteDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, orderBy, query, where } from 'firebase/firestore';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { getOrCreateQuestSession, ensureLevelOrder, advance } from "@/lib/quest";
 import MissionComplete from '@/components/MissionComplete';
+import { db } from "@/lib/firebase";
 
 
 export default function QuestPage() {
@@ -156,7 +157,7 @@ export default function QuestPage() {
   const handleRestart = async () => {
     if (!user?.uid || !deckId) return;
     setLoading(true);
-    const sessionRef = doc(db, "users", user.uid, "questSessions", deckId);
+    const sessionRef = doc(getDb(), "users", user.uid, "questSessions", deckId);
     await deleteDoc(sessionRef);
     fetchSession(); // This will re-create the session
   };

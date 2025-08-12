@@ -51,7 +51,7 @@ export default function MissionComplete({
     { label: "Coins", value: `+${coins}`, tint: "yellow" },
     { label: "Accuracy", value: `${accuracy}%`, tint: "green" },
     { label: "Answered", value: `${questionsAnswered}`, tint: "purple" },
-  ];
+  ] as const;
 
   return (
     <div className="container mx-auto p-6 text-slate-900 dark:text-slate-50">

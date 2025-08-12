@@ -120,9 +120,9 @@ export function useUserSettings() {
 
     setLoading(true);
     const db = getDb();
-    const settingsRef = doc(db, "users", user.uid);
-    const unlockedCustomizationsRef = doc(db, "users", user.uid, "customizations", "unlocked");
-    const selectedCustomizationsRef = doc(db, "users", user.uid, "customizations", "selected");
+    const settingsRef = doc(getDb(), "users", user.uid);
+    const unlockedCustomizationsRef = doc(getDb(), "users", user.uid, "customizations", "unlocked");
+    const selectedCustomizationsRef = doc(getDb(), "users", user.uid, "customizations", "selected");
     
     let unlockedCache: UserCustomizations | null = null;
     let selectedCache: SelectedCustomizations | null = null;
@@ -210,7 +210,7 @@ export function useUserSettings() {
   const updateSettings = async (data: Partial<UserSettings>) => {
     if (!user) throw new Error("Not signed in");
     const db = getDb();
-    const ref = doc(db, "users", user.uid);
+    const ref = doc(getDb(), "users", user.uid);
     
     // Firestore's { merge: true } handles deep merging of nested objects.
     // We can directly pass the partial data to be updated.
