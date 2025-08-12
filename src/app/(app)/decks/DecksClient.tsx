@@ -26,7 +26,7 @@ import { motion } from "framer-motion";
 
 // 🔥 Firestore live folders
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
-import { db } from "@/stitch/lib/firebase";
+import { db } from "@/lib/firebase";
 
 type DeckWithProgress = DeckSummary & {
   progress?: {
