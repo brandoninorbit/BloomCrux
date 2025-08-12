@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useRef } from "react";
 import autoAnimate from "@formkit/auto-animate";
@@ -191,7 +191,7 @@ export default function DecksClient() {
         // folderId: f[i % f.length]?.id, // (removed: folders now come from live snapshot)
         updatedAt: Date.now() - i * 10000,
       }));
-      setDecks((decksWithMockProgress) as unknown as DeckWithProgress[]);
+      setDecks(decksWithMockProgress);
     })();
   }, [user]);
 
@@ -411,4 +411,3 @@ export default function DecksClient() {
     </main>
   );
 }
-

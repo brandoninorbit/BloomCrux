@@ -1,16 +1,265 @@
-{
-  "firestore": {
-    "rules": "firestore.rules"
-  },
-  "hosting": {
-    "public": "out",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "rewrites": [
-      { "source": "**", "destination": "/index.html" }
-    ]
-  }
-}
+
+You are an expert TypeScript engineer with deep experience in refactoring and large‑repo debugging.
+
+Mission
+Fix all TypeScript compilation errors so npx tsc --noEmit completes with 0 errors. Keep changes minimal and behavior‑preserving.
+
+Inputs I will provide
+A .zip of the entire project (source, config, types).
+
+The exact output of: npx tsc --noEmit (no edits).
+
+Hard rules
+Edit files directly (don’t just describe changes).
+
+Preserve behavior; do not add features or remove logic unrelated to errors.
+
+Prefer proper typing (narrowing, generics, guards) over any.
+
+Do not add // @ts-ignore or // @ts-expect-error unless I explicitly allow it.
+
+Only add deps/devDeps if truly required; list install commands separately (don’t guess versions if unknown—read package.json/lockfile and infer).
+
+If config (tsconfig/eslint) needs changes, change only the minimum.
+
+If an error is ambiguous, state the options briefly and pick the safest, backwards‑compatible fix.
+
+Workflow
+Parse & Map
+
+Parse the error log line‑by‑line.
+
+Build a table: # | file | line | code | brief cause | planned fix.
+
+Plan
+
+Produce a short, numbered fix plan (ordered to minimize cascading errors).
+
+Call out any repo‑wide patterns (e.g., missing null checks, incorrect imports).
+
+Apply Fixes (Patch Set)
+
+Return patch blocks for each changed file in this exact format:
+
+pgsql
+Copy
+Edit
+===PATCH START===
+FILE: relative/path/from/repo/root.ts
+@@
+[contextual unified diff or full-file replacement]
+@@
+===PATCH END===
+For new files, use:
+
+pgsql
+Copy
+Edit
+===PATCH START===
+FILE: relative/path/new-file.d.ts
+NEW FILE
+[file contents]
+===PATCH END===
+For deleted files, use:
+
+pgsql
+Copy
+Edit
+===PATCH START===
+FILE: relative/path/old-file.ts
+DELETE FILE
+===PATCH END===
+Config & Types
+
+If you add ambient types, place them in types/ and include them via tsconfig.json typeRoots or files as needed (patch those too).
+
+If external types are missing (e.g., @types/…), list exact install commands in a separate “Post‑install” section.
+
+Mental Build Check
+
+Do a brief “why this now compiles” summary.
+
+Flag any places where runtime testing is recommended (I’ll run them).
+
+Deliverables
+
+Preferred: a single downloadable .zip of the fixed project (same structure).
+
+If zip not supported: return the complete patch set (all files).
+
+Provide a Post‑install block with any commands I must run (e.g., npm i -D @types/node), and then npx tsc --noEmit.
+
+Output Template
+Error Map Table
+
+Fix Plan
+
+Patch Set (only the exact format above)
+
+Post‑install (if needed)
+
+Mental Build Check (1–3 bullets)
+
+Notes
+Prefer: strict null checks, type guards, narrowing, safe optional chaining, correct import paths, fixing generics/overloads, adding minimal ambient decls for legacy JS.
+
+Avoid: mutating public types, removing checks, masking errors with any or ignore.
+
+If output would exceed limits, chunk the Patch Set across consecutive messages, keeping sections 1–2 short.--- PS C:\Users\brand\BloomCrux> npx tsc --noEmit
+src/app/decks/[deckId]/study/quest/page.tsx:63:13 - error TS2339: Property 'completedLevels' does not exist on type '{ id: string; } | { deckId: string; levels: "Remember"[]; currentLevel: BloomLevel; currentIndex: number; progressByLevel: Record<BloomLevel, string[]>; ... 4 more ...; id: string; }'.
+  Property 'completedLevels' does not exist on type '{ id: string; }'.
+
+63       if (s.completedLevels.length === s.levels.length && s.levels.length > 0) {
+               ~~~~~~~~~~~~~~~
+
+src/app/decks/[deckId]/study/quest/page.tsx:63:42 - error TS2339: Property 'levels' does not exist on type '{ id: string; } | { deckId: string; levels: "Remember"[]; currentLevel: BloomLevel; currentIndex: number; progressByLevel: Record<BloomLevel, string[]>; ... 4 more ...; id: string; }'.
+  Property 'levels' does not exist on type '{ id: string; }'.
+
+63       if (s.completedLevels.length === s.levels.length && s.levels.length > 0) {
+                                            ~~~~~~
+
+src/app/decks/[deckId]/study/quest/page.tsx:63:61 - error TS2339: Property 'levels' does not exist on type '{ id: string; } | { deckId: string; levels: "Remember"[]; currentLevel: BloomLevel; currentIndex: number; progressByLevel: Record<BloomLevel, string[]>; ... 4 more ...; id: string; }'.
+  Property 'levels' does not exist on type '{ id: string; }'.
+
+63       if (s.completedLevels.length === s.levels.length && s.levels.length > 0) {
+                                                               ~~~~~~
+
+src/app/decks/[deckId]/study/quest/page.tsx:73:18 - error TS2339: Property 'currentLevel' does not exist on type '{ id: string; } | { deckId: string; levels: "Remember"[]; currentLevel: BloomLevel; currentIndex: number; progressByLevel: Record<BloomLevel, string[]>; ... 4 more ...; id: string; }'.
+  Property 'currentLevel' does not exist on type '{ id: string; }'.
+
+73         level: s.currentLevel as BloomLevel,
+                    ~~~~~~~~~~~~
+
+src/app/decks/[deckId]/study/quest/page.tsx:83:36 - error TS2339: Property 'progressByLevel' does not exist on type '{ id: string; } | { deckId: string; levels: "Remember"[]; currentLevel: BloomLevel; currentIndex: number; progressByLevel: Record<BloomLevel, string[]>; ... 4 more ...; id: string; }'.
+  Property 'progressByLevel' does not exist on type '{ id: string; }'.
+
+83       const order = updatedSession.progressByLevel[updatedSession.currentLevel] as string[];
+                                      ~~~~~~~~~~~~~~~
+
+src/app/decks/[deckId]/study/quest/page.tsx:83:67 - error TS2339: Property 'currentLevel' does not exist on type '{ id: string; } | { deckId: string; levels: "Remember"[]; currentLevel: BloomLevel; currentIndex: number; progressByLevel: Record<BloomLevel, string[]>; ... 4 more ...; id: string; }'.
+  Property 'currentLevel' does not exist on type '{ id: string; }'.
+
+83       const order = updatedSession.progressByLevel[updatedSession.currentLevel] as string[];
+                                                                     ~~~~~~~~~~~~
+
+src/app/decks/[deckId]/study/quest/page.tsx:84:43 - error TS2339: Property 'currentIndex' does not exist on type '{ id: string; } | { deckId: string; levels: "Remember"[]; currentLevel: BloomLevel; currentIndex: number; progressByLevel: Record<BloomLevel, string[]>; ... 4 more ...; id: string; }'.
+  Property 'currentIndex' does not exist on type '{ id: string; }'.
+
+84       const cardId = order[updatedSession.currentIndex];
+                                             ~~~~~~~~~~~~
+
+src/app/decks/[deckId]/study/quest/page.tsx:126:11 - error TS2339: Property 'completedLevels' does not exist on type '{ id: string; } | { deckId: string; levels: "Remember"[]; currentLevel: BloomLevel; currentIndex: number; progressByLevel: Record<BloomLevel, string[]>; ... 4 more ...; id: string; }'.
+  Property 'completedLevels' does not exist on type '{ id: string; }'.
+
+126     if (s.completedLevels.length === s.levels.length && s.levels.length > 0) {
+              ~~~~~~~~~~~~~~~
+
+src/app/decks/[deckId]/study/quest/page.tsx:126:40 - error TS2339: Property 'levels' does not exist on type '{ id: string; } | { deckId: string; levels: "Remember"[]; currentLevel: BloomLevel; currentIndex: number; progressByLevel: Record<BloomLevel, string[]>; ... 4 more ...; id: string; }'.
+  Property 'levels' does not exist on type '{ id: string; }'.
+
+126     if (s.completedLevels.length === s.levels.length && s.levels.length > 0) {
+                                           ~~~~~~
+
+src/app/decks/[deckId]/study/quest/page.tsx:126:59 - error TS2339: Property 'levels' does not exist on type '{ id: string; } | { deckId: string; levels: "Remember"[]; currentLevel: BloomLevel; currentIndex: number; progressByLevel: Record<BloomLevel, string[]>; ... 4 more ...; id: string; }'.
+  Property 'levels' does not exist on type '{ id: string; }'.
+
+126     if (s.completedLevels.length === s.levels.length && s.levels.length > 0) {
+                                                              ~~~~~~
+
+src/app/decks/[deckId]/study/quest/page.tsx:136:16 - error TS2339: Property 'currentLevel' does not exist on type '{ id: string; } | { deckId: string; levels: "Remember"[]; currentLevel: BloomLevel; currentIndex: number; progressByLevel: Record<BloomLevel, string[]>; ... 4 more ...; id: string; }'.
+  Property 'currentLevel' does not exist on type '{ id: string; }'.
+
+136       level: s.currentLevel as BloomLevel,
+                   ~~~~~~~~~~~~
+
+src/app/decks/[deckId]/study/quest/page.tsx:146:34 - error TS2339: Property 'progressByLevel' does not exist on type '{ id: string; } | { deckId: string; levels: "Remember"[]; currentLevel: BloomLevel; currentIndex: number; progressByLevel: Record<BloomLevel, string[]>; ... 4 more ...; id: string; }'.
+  Property 'progressByLevel' does not exist on type '{ id: string; }'.
+
+146     const order = updatedSession.progressByLevel[updatedSession.currentLevel] as string[];
+                                     ~~~~~~~~~~~~~~~
+
+src/app/decks/[deckId]/study/quest/page.tsx:146:65 - error TS2339: Property 'currentLevel' does not exist on type '{ id: string; } | { deckId: string; levels: "Remember"[]; currentLevel: BloomLevel; currentIndex: number; progressByLevel: Record<BloomLevel, string[]>; ... 4 more ...; id: string; }'.
+  Property 'currentLevel' does not exist on type '{ id: string; }'.
+
+146     const order = updatedSession.progressByLevel[updatedSession.currentLevel] as string[];
+                                                                    ~~~~~~~~~~~~
+
+src/app/decks/[deckId]/study/quest/page.tsx:147:41 - error TS2339: Property 'currentIndex' does not exist on type '{ id: string; } | { deckId: string; levels: "Remember"[]; currentLevel: BloomLevel; currentIndex: number; progressByLevel: Record<BloomLevel, string[]>; ... 4 more ...; id: string; }'.
+  Property 'currentIndex' does not exist on type '{ id: string; }'.
+
+147     const cardId = order[updatedSession.currentIndex];
+                                            ~~~~~~~~~~~~
+
+src/app/decks/[deckId]/study/quest/page.tsx:159:24 - error TS2304: Cannot find name 'doc'.
+
+159     const sessionRef = doc(db, "users", user.uid, "questSessions", deckId);
+                           ~~~
+
+src/app/decks/[deckId]/study/quest/page.tsx:159:28 - error TS2304: Cannot find name 'db'.
+
+159     const sessionRef = doc(db, "users", user.uid, "questSessions", deckId);
+                               ~~
+
+src/app/decks/[deckId]/study/random-remix/page.tsx:42:12 - error TS2339: Property 'currentIndex' does not exist on type '{ id: string; } | { deckId: string; order: string[]; currentIndex: number; totalCards: number; startedAt: FieldValue; updatedAt: FieldValue; id: string; }'.
+  Property 'currentIndex' does not exist on type '{ id: string; }'.
+
+42       if(s.currentIndex >= s.order.length) {
+              ~~~~~~~~~~~~
+
+src/app/decks/[deckId]/study/random-remix/page.tsx:42:30 - error TS2339: Property 'order' does not exist on type '{ id: string; } | { deckId: string; order: string[]; currentIndex: number; totalCards: number; startedAt: FieldValue; updatedAt: FieldValue; id: string; }'.
+  Property 'order' does not exist on type '{ id: string; }'.
+
+42       if(s.currentIndex >= s.order.length) {
+                                ~~~~~
+
+src/app/decks/[deckId]/study/random-remix/page.tsx:49:27 - error TS2339: Property 'order' does not exist on type '{ id: string; } | { deckId: string; order: string[]; currentIndex: number; totalCards: number; startedAt: FieldValue; updatedAt: FieldValue; id: string; }'.
+  Property 'order' does not exist on type '{ id: string; }'.
+
+49       const currentId = s.order[s.currentIndex];
+                             ~~~~~
+
+src/app/decks/[deckId]/study/random-remix/page.tsx:49:35 - error TS2339: Property 'currentIndex' does not exist on type '{ id: string; } | { deckId: string; order: string[]; currentIndex: number; totalCards: number; startedAt: FieldValue; updatedAt: FieldValue; id: string; }'.
+  Property 'currentIndex' does not exist on type '{ id: string; }'.
+
+49       const currentId = s.order[s.currentIndex];
+                                     ~~~~~~~~~~~~
+
+src/app/decks/[deckId]/study/random-remix/page.tsx:81:11 - error TS2339: Property 'currentIndex' does not exist on type '{ id: string; } | { deckId: string; order: string[]; currentIndex: number; totalCards: number; startedAt: FieldValue; updatedAt: FieldValue; id: string; }'.
+  Property 'currentIndex' does not exist on type '{ id: string; }'.
+
+81     if (s.currentIndex >= s.order.length) {
+             ~~~~~~~~~~~~
+
+src/app/decks/[deckId]/study/random-remix/page.tsx:81:29 - error TS2339: Property 'order' does not exist on type '{ id: string; } | { deckId: string; order: string[]; currentIndex: number; totalCards: number; startedAt: FieldValue; updatedAt: FieldValue; id: string; }'.
+  Property 'order' does not exist on type '{ id: string; }'.
+
+81     if (s.currentIndex >= s.order.length) {
+                               ~~~~~
+
+src/app/decks/[deckId]/study/random-remix/page.tsx:88:25 - error TS2339: Property 'order' does not exist on type '{ id: string; } | { deckId: string; order: string[]; currentIndex: number; totalCards: number; startedAt: FieldValue; updatedAt: FieldValue; id: string; }'.
+  Property 'order' does not exist on type '{ id: string; }'.
+
+88     const currentId = s.order[s.currentIndex];
+                           ~~~~~
+
+src/app/decks/[deckId]/study/random-remix/page.tsx:88:33 - error TS2339: Property 'currentIndex' does not exist on type '{ id: string; } | { deckId: string; order: string[]; currentIndex: number; totalCards: number; startedAt: FieldValue; updatedAt: FieldValue; id: string; }'.
+  Property 'currentIndex' does not exist on type '{ id: string; }'.
+
+88     const currentId = s.order[s.currentIndex];
+                                   ~~~~~~~~~~~~
+
+src/components/MissionComplete.tsx:133:20 - error TS2322: Type '{ label: string; value: string; tint: string; }' is not assignable to type '{ label: string; value: string; tint: "blue" | "green" | "yellow" | "purple"; }'.
+  Types of property 'tint' are incompatible.
+    Type 'string' is not assignable to type '"blue" | "green" | "yellow" | "purple"'.
+
+133                   <StatTile {...s}/>
+                       ~~~~~~~~
+
+
+Found 25 errors in 3 files.
+
+Errors  Files
+    16  src/app/decks/[deckId]/study/quest/page.tsx:63
+     8  src/app/decks/[deckId]/study/random-remix/page.tsx:42
+     1  src/components/MissionComplete.tsx:133
+PS C:\Users\brand\BloomCrux>
