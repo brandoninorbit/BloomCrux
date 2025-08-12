@@ -1,0 +1,48 @@
+'use client';
+
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/lib/firebase'; // Make sure this path is correct
+
+// Create a context to hold the user data
+const AuthContext = createContext<User | null>(null);
+
+// Create the provider component
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // This is the crucial listener from Firebase
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      // This function runs whenever the user signs in or out
+      if (user) {
+        // User is signed in
+        setUser(user);
+      } else {
+        // User is signed out
+        setUser(null);
+      }
+      setLoading(false); // Stop loading once we have the user status
+    });
+
+    // Cleanup the listener when the component is unmounted
+    return () => unsubscribe();
+  }, []); // The empty array ensures this effect runs only once
+
+  // We show a loading indicator until the auth state is determined
+  if (loading) {
+    return <div>Loading...</div>; // Or a fancy spinner component
+  }
+
+  return (
+    <AuthContext.Provider value={user}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// Create a custom hook to easily access the user data anywhere in the app
+export const useAuth = () => {
+  return useContext(AuthContext);
+};

@@ -1,0 +1,2 @@
+﻿/** Adapter -> use vendored StitchStudy Firebase init */
+export { getDb, getFirebaseAuth, getFirebaseStorage } from "../stitch/lib/firebase";

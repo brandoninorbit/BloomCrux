@@ -1,0 +1,10 @@
+
+// This file is informational only. The PowerShell script updates your real tsconfig.json in-place.
+// The key changes it enforces are:
+{
+  "skipLibCheck": true,
+  "exclude": [
+    "node_modules",
+    ".next"
+  ]
+}

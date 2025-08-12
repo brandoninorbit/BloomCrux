@@ -1,0 +1,892 @@
+
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import type { Flashcard, StandardMCQCard, CardFormat, FillInTheBlankCard, ShortAnswerCard, BloomLevel, CompareContrastCard, DragAndDropSortingCard, DndItem, SequencingCard, TwoTierMCQCard, CERCard, CERPart } from '@/stitch/types';
+import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
+import { Info, PlusCircle, Trash2 } from 'lucide-react';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { cn } from '@/lib/utils';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Separator } from './ui/separator';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+
+interface CreateCardDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (newCard: Flashcard) => void;
+}
+
+const DEFAULT_BLOOM_BY_FORMAT: Record<CardFormat, BloomLevel> = {
+  'Standard MCQ': 'Remember',
+  'Fill in the Blank': 'Remember',
+  'Short Answer': 'Understand',
+  'Compare/Contrast': 'Analyze',
+  'Drag and Drop Sorting': 'Apply',
+  'Sequencing': 'Apply',
+  'Two-Tier MCQ': 'Evaluate',
+  'CER': 'Create',
+  'text': 'Remember',
+  'code': 'Apply',
+  'other': 'Remember',
+};
+
+const BLOOM_LEVELS: BloomLevel[] = [ "Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create" ];
+
+type CerPartState = {
+    inputType: 'text' | 'mcq';
+    sampleAnswer: string;
+    options: string[];
+    correctIndex: number;
+};
+
+
+export default function CreateCardDialog({ open, onOpenChange, onSave }: CreateCardDialogProps) {
+  const [cardType, setCardType] = useState<CardFormat>('Standard MCQ');
+  const [bloomLevel, setBloomLevel] = useState<BloomLevel>('Remember');
+  
+  // MCQ State
+  const [questionStem, setQuestionStem] = useState('');
+  const [options, setOptions] = useState(['', '', '', '']);
+  const [correctAnswerIndex, setCorrectAnswerIndex] = useState(0);
+  const [explanation, setExplanation] = useState('');
+
+  // Two-Tier MCQ State
+  const [tier1Question, setTier1Question] = useState('');
+  const [tier1Options, setTier1Options] = useState(['', '', '', '']);
+  const [tier1CorrectIndex, setTier1CorrectIndex] = useState(0);
+  const [tier2Question, setTier2Question] = useState('');
+  const [tier2Options, setTier2Options] = useState(['', '', '', '']);
+  const [tier2CorrectIndex, setTier2CorrectIndex] = useState(0);
+
+  // Text-based State
+  const [prompt, setPrompt] = useState('');
+  const [correctAnswer, setCorrectAnswer] = useState('');
+  const [suggestedAnswer, setSuggestedAnswer] = useState('');
+
+  // Compare/Contrast State
+  const [itemA, setItemA] = useState('');
+  const [itemB, setItemB] = useState('');
+  const [comparisonPairs, setComparisonPairs] = useState([{ feature: '', pointA: '', pointB: '' }]);
+
+  // Drag and Drop Sorting State
+  const [dndPrompt, setDndPrompt] = useState('');
+  const [dndCategories, setDndCategories] = useState(['']);
+  const [dndItems, setDndItems] = useState<DndItem[]>([{ term: '', correctCategory: '' }]);
+
+  // Sequencing State
+  const [sequencingPrompt, setSequencingPrompt] = useState('');
+  const [sequenceItems, setSequenceItems] = useState(['']);
+  
+  // CER State
+  const [cerScenario, setCerScenario] = useState('');
+  const [cerQuestion, setCerQuestion] = useState('');
+  const [cerParts, setCerParts] = useState<Record<'claim' | 'evidence' | 'reasoning', CerPartState>>({
+    claim: { inputType: 'text', sampleAnswer: '', options: ['', ''], correctIndex: 0 },
+    evidence: { inputType: 'text', sampleAnswer: '', options: ['', ''], correctIndex: 0 },
+    reasoning: { inputType: 'text', sampleAnswer: '', options: ['', ''], correctIndex: 0 },
+  });
+
+  useEffect(() => {
+    // When card type changes, update the default bloom level
+    setBloomLevel(DEFAULT_BLOOM_BY_FORMAT[cardType] || 'Remember');
+  }, [cardType]);
+
+  const resetForm = () => {
+    setQuestionStem('');
+    setOptions(['', '', '', '']);
+    setCorrectAnswerIndex(0);
+    setExplanation('');
+    setPrompt('');
+    setCorrectAnswer('');
+    setSuggestedAnswer('');
+    setItemA('');
+    setItemB('');
+    setComparisonPairs([{ feature: '', pointA: '', pointB: '' }]);
+    setDndPrompt('');
+    setDndCategories(['']);
+    setDndItems([{ term: '', correctCategory: '' }]);
+    setSequencingPrompt('');
+    setSequenceItems(['']);
+    setTier1Question('');
+    setTier1Options(['', '', '', '']);
+    setTier1CorrectIndex(0);
+    setTier2Question('');
+    setTier2Options(['', '', '', '']);
+    setTier2CorrectIndex(0);
+    setCerScenario('');
+    setCerQuestion('');
+    setCerParts({
+        claim: { inputType: 'text', sampleAnswer: '', options: ['', ''], correctIndex: 0 },
+        evidence: { inputType: 'text', sampleAnswer: '', options: ['', ''], correctIndex: 0 },
+        reasoning: { inputType: 'text', sampleAnswer: '', options: ['', ''], correctIndex: 0 },
+    });
+  };
+
+  const handleSave = () => {
+    let newCard: Flashcard;
+
+    switch (cardType) {
+        case 'Standard MCQ':
+            if (!questionStem.trim() || options.some(opt => !opt.trim())) {
+                alert('Please fill in all fields for the MCQ card.');
+                return;
+            }
+            newCard = {
+                id: crypto.randomUUID(),
+                cardFormat: 'Standard MCQ',
+                questionStem,
+                topic: 'Manual',
+                bloomLevel,
+                tier1: {
+                question: questionStem,
+                options,
+                correctAnswerIndex,
+                distractorRationale: { explanation },
+                },
+            } as StandardMCQCard;
+            break;
+        
+        case 'Two-Tier MCQ':
+            if (!tier1Question.trim() || tier1Options.some(opt => !opt.trim()) || !tier2Question.trim() || tier2Options.some(opt => !opt.trim())) {
+                alert('Please fill in all fields for both tiers of the Two-Tier MCQ card.');
+                return;
+            }
+            newCard = {
+                id: crypto.randomUUID(),
+                cardFormat: 'Two-Tier MCQ',
+                questionStem: tier1Question,
+                topic: 'Manual',
+                bloomLevel,
+                tier1: {
+                    question: tier1Question,
+                    options: tier1Options,
+                    correctAnswerIndex: tier1CorrectIndex,
+                },
+                tier2: {
+                    question: tier2Question,
+                    options: tier2Options,
+                    correctAnswerIndex: tier2CorrectIndex,
+                }
+            } as TwoTierMCQCard;
+            break;
+
+        case 'Fill in the Blank':
+            if (!prompt.trim() || !correctAnswer.trim()) {
+                alert('Please fill in the prompt and correct answer.');
+                return;
+            }
+            newCard = {
+                id: crypto.randomUUID(),
+                cardFormat: 'Fill in the Blank',
+                questionStem: prompt,
+                prompt: prompt,
+                correctAnswer: correctAnswer,
+                topic: 'Manual',
+                bloomLevel,
+            } as FillInTheBlankCard;
+            break;
+
+        case 'Short Answer':
+            if (!prompt.trim() || !suggestedAnswer.trim()) {
+                alert('Please fill in the prompt and suggested answer.');
+                return;
+            }
+             newCard = {
+                id: crypto.randomUUID(),
+                cardFormat: 'Short Answer',
+                questionStem: prompt,
+                prompt: prompt,
+                suggestedAnswer: suggestedAnswer,
+                topic: 'Manual',
+                bloomLevel,
+            } as ShortAnswerCard;
+            break;
+
+        case 'Compare/Contrast':
+            if (!itemA.trim() || !itemB.trim() || comparisonPairs.some(p => !p.feature.trim() || !p.pointA.trim() || !p.pointB.trim())) {
+                alert('Please fill out both items and all comparison point fields.');
+                return;
+            }
+            newCard = {
+                id: crypto.randomUUID(),
+                cardFormat: 'Compare/Contrast',
+                questionStem: `Compare ${itemA} and ${itemB}`,
+                topic: 'Manual',
+                bloomLevel,
+                itemA,
+                itemB,
+                pairs: comparisonPairs,
+            } as CompareContrastCard;
+            break;
+        
+        case 'Drag and Drop Sorting':
+            if (!dndPrompt.trim() || dndCategories.some(c => !c.trim()) || dndItems.some(i => !i.term.trim() || !i.correctCategory.trim())) {
+                alert('Please fill out the prompt, all categories, and all items for sorting.');
+                return;
+            }
+            newCard = {
+                id: crypto.randomUUID(),
+                cardFormat: 'Drag and Drop Sorting',
+                questionStem: dndPrompt,
+                prompt: dndPrompt,
+                categories: dndCategories.filter(c => c.trim()),
+                items: dndItems,
+                topic: 'Manual',
+                bloomLevel,
+            } as DragAndDropSortingCard;
+            break;
+
+        case 'Sequencing':
+            if (!sequencingPrompt.trim() || sequenceItems.some(item => !item.trim())) {
+                alert('Please fill out the prompt and all sequence items.');
+                return;
+            }
+            newCard = {
+                id: crypto.randomUUID(),
+                cardFormat: 'Sequencing',
+                questionStem: sequencingPrompt,
+                prompt: sequencingPrompt,
+                items: sequenceItems.filter(i => i.trim()),
+                correctOrder: sequenceItems.filter(i => i.trim()),
+                topic: 'Manual',
+                bloomLevel,
+            } as SequencingCard;
+            break;
+            
+        case 'CER':
+            const finalCerParts: CERPart[] = (Object.keys(cerParts) as Array<keyof typeof cerParts>).map(key => {
+                const part = cerParts[key];
+                const finalPart: CERPart = { key, inputType: part.inputType };
+                if (part.inputType === 'text') {
+                    finalPart.sampleAnswer = part.sampleAnswer;
+                } else {
+                    finalPart.options = part.options.filter(o => o.trim());
+                    finalPart.correctIndex = part.correctIndex;
+                }
+                return finalPart;
+            });
+
+            newCard = {
+                id: crypto.randomUUID(),
+                cardFormat: 'CER',
+                questionStem: cerQuestion,
+                prompt: cerScenario,
+                question: cerQuestion,
+                parts: finalCerParts,
+                topic: 'Manual',
+                bloomLevel,
+            } as CERCard;
+            break;
+
+        default:
+            alert("This card type hasn't been implemented yet.");
+            return;
+    }
+
+
+    onSave(newCard);
+    resetForm();
+  };
+
+  const handleOptionChange = (index: number, value: string) => {
+    const newOptions = [...options];
+    newOptions[index] = value;
+    setOptions(newOptions);
+  };
+  
+  const handleTier1OptionChange = (index: number, value: string) => {
+    const newOptions = [...tier1Options];
+    newOptions[index] = value;
+    setTier1Options(newOptions);
+  };
+  
+  const handleTier2OptionChange = (index: number, value: string) => {
+    const newOptions = [...tier2Options];
+    newOptions[index] = value;
+    setTier2Options(newOptions);
+  };
+
+  const handlePairChange = (index: number, field: 'feature' | 'pointA' | 'pointB', value: string) => {
+    const newPairs = [...comparisonPairs];
+    newPairs[index][field] = value;
+    setComparisonPairs(newPairs);
+  };
+
+  const addPair = () => {
+    setComparisonPairs([...comparisonPairs, { feature: '', pointA: '', pointB: '' }]);
+  };
+
+  const removePair = (index: number) => {
+    const newPairs = comparisonPairs.filter((_, i) => i !== index);
+    setComparisonPairs(newPairs);
+  };
+  
+  const handleCategoryChange = (index: number, value: string) => {
+    const newCategories = [...dndCategories];
+    newCategories[index] = value;
+    setDndCategories(newCategories);
+  };
+
+  const addCategory = () => setDndCategories([...dndCategories, '']);
+  
+  const removeCategory = (index: number) => {
+    const categoryToRemove = dndCategories[index];
+    setDndCategories(dndCategories.filter((_, i) => i !== index));
+    // Also clear this category from any items that were using it
+    setDndItems(dndItems.map(item => item.correctCategory === categoryToRemove ? { ...item, correctCategory: '' } : item));
+  };
+  
+  const handleDndItemChange = <K extends keyof DndItem>(index: number, field: K, value: DndItem[K]) => {
+    const newItems = [...dndItems];
+    newItems[index][field] = value;
+    setDndItems(newItems);
+  };
+  
+  const addItem = () => setDndItems([...dndItems, { term: '', correctCategory: '' }]);
+
+  const removeItem = (index: number) => setDndItems(dndItems.filter((_, i) => i !== index));
+
+  const handleSequenceItemChange = (index: number, value: string) => {
+    const newItems = [...sequenceItems];
+    newItems[index] = value;
+    setSequenceItems(newItems);
+  };
+
+  const addSequenceItem = () => setSequenceItems([...sequenceItems, '']);
+  
+  const removeSequenceItem = (index: number) => setSequenceItems(sequenceItems.filter((_, i) => i !== index));
+
+  const handleCerPartChange = (part: keyof typeof cerParts, field: keyof CerPartState, value: any) => {
+    setCerParts(prev => ({
+        ...prev,
+        [part]: {
+            ...prev[part],
+            [field]: value
+        }
+    }));
+  };
+
+  const handleCerOptionChange = (part: keyof typeof cerParts, index: number, value: string) => {
+    const newOptions = [...cerParts[part].options];
+    newOptions[index] = value;
+    handleCerPartChange(part, 'options', newOptions);
+  };
+
+  
+  const isTwoColumn = ['Compare/Contrast', 'Drag and Drop Sorting'].includes(cardType);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className={cn("sm:max-w-[625px] transition-all duration-300",
+        isTwoColumn && "sm:max-w-4xl"
+      )}>
+        <DialogHeader>
+          <DialogTitle>Add a New Card</DialogTitle>
+          <DialogDescription>
+            Select a card type and fill in the details. Click save when you're done.
+          </DialogDescription>
+        </DialogHeader>
+        <div className={cn("grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-4", 
+            isTwoColumn && "grid-cols-2"
+        )}>
+          <div className={cn("space-y-4", isTwoColumn && "pr-8 border-r")}>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="question-type" className="text-right">
+                  Card Type
+                </Label>
+                <Select value={cardType} onValueChange={(v) => setCardType(v as CardFormat)}>
+                  <SelectTrigger id="question-type" className="col-span-3">
+                    <SelectValue placeholder="Select a question type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel className="flex items-center gap-2">
+                        <span className="text-lg">🌱</span> Remember / Understand
+                      </SelectLabel>
+                      <SelectItem value="Standard MCQ">Standard Multiple Choice</SelectItem>
+                      <SelectItem value="Fill in the Blank">Fill in the Blank</SelectItem>
+                      <SelectItem value="Short Answer">Short Answer</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel className="flex items-center gap-2">
+                        <span className="text-lg">🔧</span> Apply / Analyze
+                      </SelectLabel>
+                      <SelectItem value="Compare/Contrast">Compare/Contrast</SelectItem>
+                      <SelectItem value="Drag and Drop Sorting">Drag & Drop Sorting</SelectItem>
+                      <SelectItem value="Sequencing">Sequencing</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel className="flex items-center gap-2">
+                        <span className="text-lg">🧪</span> Evaluate / Create
+                      </SelectLabel>
+                      <SelectItem value="Two-Tier MCQ">Two-Tier MCQ</SelectItem>
+                      <SelectItem value="CER">Claim-Evidence-Reasoning</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="bloom-level" className="text-right">
+                  Bloom's Level
+                </Label>
+                <Select value={bloomLevel} onValueChange={(v) => setBloomLevel(v as BloomLevel)}>
+                  <SelectTrigger id="bloom-level" className="col-span-3">
+                    <SelectValue placeholder="Select a Bloom's level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BLOOM_LEVELS.map(level => (
+                        <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {cardType === 'Standard MCQ' && (
+                <>
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="question-stem" className="text-right pt-2">
+                      Question Stem
+                    </Label>
+                    <Textarea
+                      id="question-stem"
+                      value={questionStem}
+                      onChange={(e) => setQuestionStem(e.target.value)}
+                      className="col-span-3"
+                    />
+                  </div>
+                  {options.map((option, index) => (
+                    <div key={index} className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor={`option-${index}`} className="text-right">
+                        Option {String.fromCharCode(65 + index)}
+                      </Label>
+                      <Input
+                        id={`option-${index}`}
+                        value={option}
+                        onChange={(e) => handleOptionChange(index, e.target.value)}
+                        className="col-span-3"
+                      />
+                    </div>
+                  ))}
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="correct-answer" className="text-right">
+                      Correct Answer
+                    </Label>
+                    <Select value={String(correctAnswerIndex)} onValueChange={(value) => setCorrectAnswerIndex(Number(value))}>
+                      <SelectTrigger id="correct-answer" className="col-span-3">
+                        <SelectValue placeholder="Select the correct answer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {options.map((opt, i) => (
+                          <SelectItem key={i} value={String(i)} disabled={!opt.trim()}>
+                            Option {String.fromCharCode(65 + i)}: {opt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="explanation" className="text-right pt-2">
+                      Explanation
+                    </Label>
+                    <Textarea
+                      id="explanation"
+                      value={explanation}
+                      onChange={(e) => setExplanation(e.target.value)}
+                      className="col-span-3"
+                    />
+                  </div>
+                </>
+              )}
+
+              {cardType === 'Two-Tier MCQ' && (
+                <div className="space-y-4">
+                  <h3 className="text-base font-semibold text-primary col-span-4">Tier 1: Content Question</h3>
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="t1-question" className="text-right pt-2">Question</Label>
+                    <Textarea id="t1-question" value={tier1Question} onChange={e => setTier1Question(e.target.value)} className="col-span-3" />
+                  </div>
+                  {tier1Options.map((option, index) => (
+                    <div key={index} className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor={`t1-option-${index}`} className="text-right">Option {String.fromCharCode(65 + index)}</Label>
+                      <Input id={`t1-option-${index}`} value={option} onChange={e => handleTier1OptionChange(index, e.target.value)} className="col-span-3" />
+                    </div>
+                  ))}
+                   <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="t1-correct-answer" className="text-right">Correct Answer</Label>
+                    <Select value={String(tier1CorrectIndex)} onValueChange={(v) => setTier1CorrectIndex(Number(v))}>
+                      <SelectTrigger id="t1-correct-answer" className="col-span-3">
+                        <SelectValue placeholder="Select the correct answer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tier1Options.map((opt, i) => (
+                          <SelectItem key={i} value={String(i)} disabled={!opt.trim()}>
+                            Option {String.fromCharCode(65 + i)}: {opt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Separator className="my-6" />
+
+                  <h3 className="text-base font-semibold text-primary col-span-4">Tier 2: Reasoning Question</h3>
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="t2-question" className="text-right pt-2">Question</Label>
+                    <Textarea id="t2-question" value={tier2Question} onChange={e => setTier2Question(e.target.value)} className="col-span-3" placeholder="e.g., Which statement best supports your answer?" />
+                  </div>
+                  {tier2Options.map((option, index) => (
+                    <div key={index} className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor={`t2-option-${index}`} className="text-right">Option {String.fromCharCode(65 + index)}</Label>
+                      <Input id={`t2-option-${index}`} value={option} onChange={e => handleTier2OptionChange(index, e.target.value)} className="col-span-3" />
+                    </div>
+                  ))}
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="t2-correct-answer" className="text-right">Correct Answer</Label>
+                    <Select value={String(tier2CorrectIndex)} onValueChange={(v) => setTier2CorrectIndex(Number(v))}>
+                      <SelectTrigger id="t2-correct-answer" className="col-span-3">
+                        <SelectValue placeholder="Select the correct answer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tier2Options.map((opt, i) => (
+                          <SelectItem key={i} value={String(i)} disabled={!opt.trim()}>
+                            Option {String.fromCharCode(65 + i)}: {opt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {cardType === 'Fill in the Blank' && (
+                <>
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="prompt-fitb" className="text-right pt-2">
+                      Prompt
+                      <span className="block text-xs text-muted-foreground">(use ___ for the blank)</span>
+                    </Label>
+                    <Textarea
+                      id="prompt-fitb"
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      className="col-span-3"
+                      placeholder="The powerhouse of the cell is the ___."
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="correct-answer-fitb" className="text-right">
+                      Correct Answer
+                    </Label>
+                    <Input
+                      id="correct-answer-fitb"
+                      value={correctAnswer}
+                      onChange={(e) => setCorrectAnswer(e.target.value)}
+                      className="col-span-3"
+                      placeholder="Mitochondria"
+                    />
+                  </div>
+                </>
+              )}
+              
+              {cardType === 'Short Answer' && (
+                <>
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="prompt-sa" className="text-right pt-2">
+                      Prompt/Question
+                    </Label>
+                    <Textarea
+                      id="prompt-sa"
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      className="col-span-3"
+                      placeholder="Explain the process of photosynthesis in your own words."
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="suggested-answer-sa" className="text-right pt-2">
+                      Suggested Answer
+                    </Label>
+                    <Textarea
+                      id="suggested-answer-sa"
+                      value={suggestedAnswer}
+                      onChange={(e) => setSuggestedAnswer(e.target.value)}
+                      className="col-span-3"
+                      placeholder="A good answer would mention reactants (CO2, water, light), products (glucose, oxygen), and the location (chloroplasts)."
+                    />
+                  </div>
+                </>
+              )}
+              
+              {cardType === 'Compare/Contrast' && (
+                <div className="space-y-4">
+                    <div className="space-y-1">
+                        <Label htmlFor="itemA">Item A</Label>
+                        <Input id="itemA" value={itemA} onChange={e => setItemA(e.target.value)} placeholder="e.g., Mitosis" />
+                    </div>
+                     <div className="space-y-1">
+                        <Label htmlFor="itemB">Item B</Label>
+                        <Input id="itemB" value={itemB} onChange={e => setItemB(e.target.value)} placeholder="e.g., Meiosis" />
+                    </div>
+                    
+                    <div className="space-y-4">
+                        <Label>Comparison Points</Label>
+                        {comparisonPairs.map((pair, index) => (
+                           <Card key={index} className="p-4 bg-muted/50 relative">
+                                <div className="space-y-2">
+                                    <Label htmlFor={`feature-${index}`}>Feature</Label>
+                                    <Input id={`feature-${index}`} value={pair.feature} onChange={e => handlePairChange(index, 'feature', e.target.value)} placeholder="e.g., Purpose"/>
+                                    
+                                    <Label htmlFor={`pointA-${index}`}>Point for {itemA || 'A'}</Label>
+                                    <Textarea id={`pointA-${index}`} value={pair.pointA} onChange={e => handlePairChange(index, 'pointA', e.target.value)} placeholder="e.g., Cell proliferation, growth, repair" rows={2}/>
+
+                                    <Label htmlFor={`pointB-${index}`}>Point for {itemB || 'B'}</Label>
+                                    <Textarea id={`pointB-${index}`} value={pair.pointB} onChange={e => handlePairChange(index, 'pointB', e.target.value)} placeholder="e.g., Sexual reproduction to produce gametes" rows={2}/>
+                                </div>
+                                {comparisonPairs.length > 1 && (
+                                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => removePair(index)}>
+                                        <Trash2 className="h-4 w-4"/>
+                                    </Button>
+                                )}
+                           </Card>
+                        ))}
+                    </div>
+
+                    <Button variant="outline" onClick={addPair}>
+                        <PlusCircle className="mr-2 h-4 w-4"/>
+                        Add Comparison Point
+                    </Button>
+                </div>
+              )}
+              
+              {cardType === 'Drag and Drop Sorting' && (
+                 <div className="space-y-6">
+                    <div>
+                        <Label htmlFor="dnd-prompt">Prompt / Instructions</Label>
+                        <Textarea id="dnd-prompt" value={dndPrompt} onChange={(e) => setDndPrompt(e.target.value)} placeholder="Sort the terms into the correct categories." />
+                    </div>
+                    <div>
+                        <Label>Categories (Drop Zones)</Label>
+                        <div className="space-y-2">
+                            {dndCategories.map((category, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                    <Input value={category} onChange={(e) => handleCategoryChange(index, e.target.value)} placeholder={`Category ${index + 1}`} />
+                                    {dndCategories.length > 1 && (
+                                        <Button variant="ghost" size="icon" onClick={() => removeCategory(index)}>
+                                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        <Button variant="outline" size="sm" className="mt-2" onClick={addCategory}>
+                            <PlusCircle className="mr-2 h-4 w-4"/> Add Category
+                        </Button>
+                    </div>
+                 </div>
+              )}
+
+              {cardType === 'Sequencing' && (
+                <div className="space-y-4">
+                    <div>
+                        <Label htmlFor="sequencing-prompt">Prompt / Instructions</Label>
+                        <Textarea id="sequencing-prompt" value={sequencingPrompt} onChange={(e) => setSequencingPrompt(e.target.value)} placeholder="Place the events of mitosis in the correct order." />
+                    </div>
+                    <div>
+                        <Label>Items (in correct order)</Label>
+                        <p className="text-xs text-muted-foreground">These will be shuffled for the user during the study session.</p>
+                        <div className="space-y-2 mt-2">
+                            {sequenceItems.map((item, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold text-muted-foreground">{index + 1}.</span>
+                                    <Input value={item} onChange={(e) => handleSequenceItemChange(index, e.target.value)} placeholder={`Step ${index + 1}`} />
+                                    {sequenceItems.length > 1 && (
+                                        <Button variant="ghost" size="icon" onClick={() => removeSequenceItem(index)}>
+                                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                         <Button variant="outline" size="sm" className="mt-2" onClick={addSequenceItem}>
+                            <PlusCircle className="mr-2 h-4 w-4"/> Add Item
+                        </Button>
+                    </div>
+                </div>
+              )}
+
+              {cardType === 'CER' && (
+                  <div className='space-y-4'>
+                      <div>
+                          <Label htmlFor="cer-scenario">Scenario / Prompt</Label>
+                          <Textarea id="cer-scenario" value={cerScenario} onChange={e => setCerScenario(e.target.value)} />
+                      </div>
+                      <div>
+                          <Label htmlFor="cer-question">Question</Label>
+                          <Textarea id="cer-question" value={cerQuestion} onChange={e => setCerQuestion(e.target.value)} />
+                      </div>
+                      <Separator />
+                      <h3 className="font-semibold">Answer Components</h3>
+                      {(Object.keys(cerParts) as Array<keyof typeof cerParts>).map((partKey) => (
+                          <Card key={partKey} className="p-4 bg-muted/50">
+                              <CardTitle className="capitalize text-base mb-2">{partKey}</CardTitle>
+                              <CardContent className="p-0 space-y-4">
+                                  <RadioGroup
+                                    value={cerParts[partKey].inputType}
+                                    onValueChange={(v) => handleCerPartChange(partKey, 'inputType', v)}
+                                    className="flex gap-4"
+                                  >
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="text" id={`${partKey}-text`} />
+                                        <Label htmlFor={`${partKey}-text`}>Free Text</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="mcq" id={`${partKey}-mcq`} />
+                                        <Label htmlFor={`${partKey}-mcq`}>Multiple Choice</Label>
+                                    </div>
+                                  </RadioGroup>
+
+                                  {cerParts[partKey].inputType === 'text' ? (
+                                      <div>
+                                          <Label htmlFor={`${partKey}-sample`}>Sample Answer</Label>
+                                          <Textarea id={`${partKey}-sample`} value={cerParts[partKey].sampleAnswer} onChange={(e) => handleCerPartChange(partKey, 'sampleAnswer', e.target.value)} />
+                                      </div>
+                                  ) : (
+                                      <div className='space-y-2'>
+                                        <Label>Options & Correct Answer</Label>
+                                        <RadioGroup
+                                            value={String(cerParts[partKey].correctIndex)}
+                                            onValueChange={v => handleCerPartChange(partKey, 'correctIndex', Number(v))}
+                                            className="space-y-2"
+                                        >
+                                            {cerParts[partKey].options.map((opt, i) => (
+                                              <div key={i} className="flex items-center gap-2">
+                                                  <RadioGroupItem value={String(i)} id={`${partKey}-opt-item-${i}`} />
+                                                  <Input 
+                                                    id={`${partKey}-opt-${i}`} 
+                                                    value={opt} 
+                                                    onChange={e => handleCerOptionChange(partKey, i, e.target.value)}
+                                                    placeholder={`Option ${i+1}`}
+                                                  />
+                                              </div>
+                                          ))}
+                                        </RadioGroup>
+                                          <Button variant="outline" size="sm" onClick={() => handleCerPartChange(partKey, 'options', [...cerParts[partKey].options, ''])}>
+                                              <PlusCircle className="mr-2 h-4 w-4" /> Add Option
+                                          </Button>
+                                      </div>
+                                  )}
+                              </CardContent>
+                          </Card>
+                      ))}
+                  </div>
+              )}
+          </div>
+          
+          {isTwoColumn && (
+            <div className="space-y-4">
+                {cardType === 'Compare/Contrast' && (
+                     <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-center">Card Preview</h3>
+                        <Card className="p-4">
+                            <CardHeader className="p-2 text-center">
+                                <CardTitle>Compare {itemA || 'Item A'} and {itemB || 'Item B'}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Feature</TableHead>
+                                            <TableHead>{itemA || 'Item A'}</TableHead>
+                                            <TableHead>{itemB || 'Item B'}</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {comparisonPairs.map((pair, index) => (
+                                            pair.feature && (
+                                                <TableRow key={index}>
+                                                    <TableCell className="font-medium">{pair.feature}</TableCell>
+                                                    <TableCell>{pair.pointA}</TableCell>
+                                                    <TableCell>{pair.pointB}</TableCell>
+                                                </TableRow>
+                                            )
+                                        ))}
+                                        {comparisonPairs.every(p => !p.feature) && (
+                                            <TableRow>
+                                                <TableCell colSpan={3} className="text-center text-muted-foreground">Preview will appear here.</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
+                {cardType === 'Drag and Drop Sorting' && (
+                     <div>
+                        <Label>Items to Sort</Label>
+                        <div className="space-y-4">
+                           {dndItems.map((item, index) => (
+                            <Card key={index} className="p-4 bg-muted/50">
+                                <div className="flex justify-between items-center mb-2">
+                                    <p className="font-semibold">Item {index + 1}</p>
+                                     {dndItems.length > 1 && (
+                                        <Button variant="ghost" size="icon" onClick={() => removeItem(index)}>
+                                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                    )}
+                                </div>
+                                <div className="space-y-2">
+                                    <div>
+                                        <Label htmlFor={`item-term-${index}`}>Term</Label>
+                                        <Input id={`item-term-${index}`} value={item.term} onChange={(e) => handleDndItemChange(index, 'term', e.target.value)} />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor={`item-cat-${index}`}>Correct Category</Label>
+                                        <Select value={item.correctCategory} onValueChange={(value) => handleDndItemChange(index, 'correctCategory', value)}>
+                                            <SelectTrigger id={`item-cat-${index}`}>
+                                                <SelectValue placeholder="Select a category" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {dndCategories.filter(c => c.trim()).map(c => (
+                                                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            </Card>
+                           ))}
+                        </div>
+                         <Button variant="outline" size="sm" className="mt-2" onClick={addItem}>
+                            <PlusCircle className="mr-2 h-4 w-4"/> Add Item
+                        </Button>
+                    </div>
+                )}
+            </div>
+          )}
+
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button type="submit" onClick={handleSave}>Save Card</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
