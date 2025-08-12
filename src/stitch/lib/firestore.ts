@@ -21,6 +21,8 @@
 
 
 
+
+
 import { collection, getDocs, query, where, addDoc, serverTimestamp, Timestamp, doc, setDoc, getDoc, runTransaction, writeBatch, increment, deleteDoc, onSnapshot, Unsubscribe, collectionGroup, orderBy, limit } from 'firebase/firestore';
 import { getDb, getFirebaseAuth, getFirebaseStorage } from './firebase';
 import type { Flashcard, CardAttempt, Topic, UserDeckProgress, UserPowerUps, Deck, BloomLevel, PowerUpType, PurchaseCounts, GlobalProgress, ShopItem, UserInventory, UserXpStats, UserCustomizations, SelectedCustomizations, UserSettings } from '../types';
@@ -68,24 +70,29 @@ function sanitizeForFirestore<T>(obj: T): T {
  */
 export async function getTopics(userId: string): Promise<Topic[]> {
     const db = getDb();
-    const userTopicsDocRef = doc(getDb(), 'userTopics', userId);
-    const docSnap = await getDoc(userTopicsDocRef);
-
-    if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data && Array.isArray(data.topics)) {
-            const topics = data.topics as Topic[];
-            // Ensure cards array is not present on decks
-            return topics.map(topic => ({
-                ...topic,
-                decks: topic.decks.map(deck => {
-                    const { cards, ...deckWithoutCards } = deck;
-                    return { ...deckWithoutCards, cards: [] }; // FIX: add empty cards array
-                })
-            }));
-        }
+    // Corrected Path: /users/{userId}/userTopics
+    const topicsCollectionRef = collection(db, 'users', userId, 'userTopics');
+    const snapshot = await getDocs(topicsCollectionRef);
+    
+    if (snapshot.empty) {
+        return [];
     }
-    return [];
+    
+    // Assuming each document in userTopics is a deck, we group them by a 'topic' field.
+    // This is an adaptation. A better structure might be one doc per topic.
+    const decks: Deck[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), cards: [] } as Deck));
+
+    const topicsMap: { [topicId: string]: Topic } = {};
+    decks.forEach(deck => {
+        const topicId = (deck as any).topicId || 'unfiled';
+        const topicName = (deck as any).topicName || 'Unfiled';
+        if (!topicsMap[topicId]) {
+            topicsMap[topicId] = { id: topicId, name: topicName, decks: [] };
+        }
+        topicsMap[topicId].decks.push(deck);
+    });
+    
+    return Object.values(topicsMap);
 }
 
 /**
@@ -96,75 +103,60 @@ export async function getTopics(userId: string): Promise<Topic[]> {
  */
 export async function getDeck(userId: string, deckId: string): Promise<Deck | null> {
     const db = getDb();
-    const userTopicsDocRef = doc(getDb(), 'userTopics', userId);
-    const docSnap = await getDoc(userTopicsDocRef);
+    // Corrected Path: /users/{userId}/userTopics/{deckId}
+    const deckDocRef = doc(db, 'users', userId, 'userTopics', deckId);
+    const deckSnap = await getDoc(deckDocRef);
 
-    if (docSnap.exists()) {
-        const topicsData = docSnap.data().topics || [];
-        for (const topic of topicsData) {
-            const foundDeck = topic.decks.find((d: Deck) => d.id === deckId);
-            if (foundDeck) {
-                // Fetch cards for the specific deck
-                const cardsQuery = query(collection(getDb(), 'userTopics', userId, 'decks', deckId, 'cards'));
-                const cardsSnap = await getDocs(cardsQuery);
-                foundDeck.cards = cardsSnap.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                } as Flashcard));
-                return foundDeck;
-            }
-        }
+    if (!deckSnap.exists()) {
+        return null;
     }
-    return null; // Deck not found
+    
+    const deckData = deckSnap.data() as Deck;
+    
+    // Fetch cards from subcollection
+    const cardsQuery = query(collection(db, 'users', userId, 'userTopics', deckId, 'cards'));
+    const cardsSnap = await getDocs(cardsQuery);
+    
+    deckData.cards = cardsSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    } as Flashcard));
+    
+    return { ...deckData, id: deckSnap.id };
 }
 
 /**
  * Saves a single, updated deck back into the user's topics structure.
+ * This will now handle both creating a new deck and updating an existing one.
  * @param userId The ID of the user.
- * @param updatedDeck The deck object with its changes.
+ * @param deck The deck object to save.
  */
-export async function saveDeck(userId: string, updatedDeck: Deck): Promise<void> {
+export async function saveDeck(userId: string, deck: Deck): Promise<void> {
     const db = getDb();
-    const userTopicsDocRef = doc(getDb(), 'userTopics', userId);
+    const batch = writeBatch(db);
 
-    try {
-        await runTransaction(db, async (transaction) => {
-            const userTopicsDoc = await transaction.get(userTopicsDocRef);
-            if (!userTopicsDoc.exists()) {
-                throw new Error("User topics document not found.");
-            }
+    const isNewDeck = deck.id.startsWith('new_');
+    const deckId = isNewDeck ? doc(collection(db, 'users')).id : deck.id;
+    const finalDeck = { ...deck, id: deckId };
 
-            const topics = userTopicsDoc.data().topics as Topic[] || [];
-            let deckFound = false;
+    // Separate cards from the deck data
+    const { cards, ...deckToSave } = finalDeck;
 
-            // Find and update the deck within the topics structure
-            const newTopics = topics.map(topic => ({
-                ...topic,
-                decks: topic.decks.map(deck => {
-                    if (deck.id === updatedDeck.id) {
-                        deckFound = true;
-                        // Return the updated deck, but without its cards property
-                        const { cards, ...deckToSave } = updatedDeck;
-                        return deckToSave;
-                    }
-                    return deck;
-                })
-            }));
+    // The deck itself is a document in the userTopics subcollection
+    const deckRef = doc(db, 'users', userId, 'userTopics', deckId);
+    batch.set(deckRef, sanitizeForFirestore(deckToSave));
 
-            if (!deckFound) {
-                // This case should ideally not happen if the UI flows correctly
-                // but as a fallback, you could decide to add it to a default topic
-                // or throw an error.
-                throw new Error("Deck to update not found in user's topics.");
-            }
-            
-            // Save the updated topics structure
-            transaction.set(userTopicsDocRef, { topics: sanitizeForFirestore(newTopics) });
-        });
-    } catch (error) {
-        console.error("Failed to save deck:", error);
-        throw error; // Re-throw the error to be handled by the caller
+    // Save cards to a nested subcollection within the deck document
+    if (cards && cards.length > 0) {
+        for (const card of cards) {
+            const cardId = card.id.startsWith('new_') ? doc(collection(db, 'dummy')).id : card.id;
+            const { id, ...cardData } = { ...card, id: cardId }; // use the new ID if it was new
+            const cardRef = doc(db, 'users', userId, 'userTopics', deckId, 'cards', cardId);
+            batch.set(cardRef, sanitizeForFirestore(cardData));
+        }
     }
+
+    await batch.commit();
 }
 
 
@@ -176,33 +168,26 @@ export async function saveDeck(userId: string, updatedDeck: Deck): Promise<void>
  */
 export async function saveTopics(userId: string, topics: Topic[]): Promise<void> {
     const db = getDb();
-    const userTopicsDocRef = doc(getDb(), 'userTopics', userId);
-    
-    // Create a deep copy to avoid modifying the original state object
-    const topicsToSave = JSON.parse(JSON.stringify(topics));
-
-    // For each deck, save its cards to a subcollection and then remove them from the main object
     const batch = writeBatch(db);
 
-    for (const topic of topicsToSave) {
+    for (const topic of topics) {
         if (topic.decks) {
             for (const deck of topic.decks) {
-                if (deck.cards && deck.cards.length > 0) {
-                    for (const card of deck.cards) {
+                const { cards, ...deckToSave } = deck;
+                const deckRef = doc(db, 'users', userId, 'userTopics', deck.id);
+                batch.set(deckRef, sanitizeForFirestore(deckToSave), { merge: true });
+
+                if (cards && cards.length > 0) {
+                    for (const card of cards) {
                         const { id, ...cardData } = card;
-                        const cardRef = doc(getDb(), 'userTopics', userId, 'decks', deck.id, 'cards', String(id));
-                        batch.set(cardRef, sanitizeForFirestore(cardData));
+                        const cardRef = doc(db, 'users', userId, 'userTopics', deck.id, 'cards', String(id));
+                        batch.set(cardRef, sanitizeForFirestore(cardData), { merge: true });
                     }
                 }
-                // Remove the cards array from the deck object before saving the main topics doc
-                delete deck.cards;
             }
         }
     }
     
-    // Save the topics structure (without cards)
-    batch.set(userTopicsDocRef, { topics: sanitizeForFirestore(topicsToSave) });
-
     await batch.commit();
 }
 
@@ -235,14 +220,14 @@ export async function logCardAttempt(
     await runTransaction(db, async (transaction) => {
       const { deckId, cardId, bloomLevel } = attemptData;
       
-      const userTopicsDocRef = doc(getDb(), 'userTopics', userId);
-      const userSettingsDocRef = doc(getDb(), 'users', userId);
-      const deckProgressDocRef = doc(getDb(), 'userProgress', userId, 'decks', deckId);
-      const globalProgressDocRef = doc(getDb(), 'userProgress', userId);
-      const xpStatsDocRef = doc(getDb(), 'users', userId, 'xpStats', 'stats');
-      const cardsInDeckQuery = query(collection(getDb(), 'userTopics', userId, 'decks', deckId, 'cards'));
-      const customizationsDocRef = doc(getDb(), 'users', userId, 'customizations', 'unlocked');
-      const selectedCustomizationsDocRef = doc(getDb(), 'users', userId, 'customizations', 'selected');
+      const deckDocRef = doc(db, 'users', userId, 'userTopics', deckId);
+      const userSettingsDocRef = doc(db, 'users', userId);
+      const deckProgressDocRef = doc(db, 'userProgress', userId, 'decks', deckId);
+      const globalProgressDocRef = doc(db, 'userProgress', userId);
+      const xpStatsDocRef = doc(db, 'users', userId, 'xpStats', 'stats');
+      const cardsInDeckQuery = query(collection(db, 'users', userId, 'userTopics', deckId, 'cards'));
+      const customizationsDocRef = doc(db, 'users', userId, 'customizations', 'unlocked');
+      const selectedCustomizationsDocRef = doc(db, 'users', userId, 'customizations', 'selected');
 
       const cardAttemptsQuery = query(
         collection(getDb(), 'cardAttempts'),
@@ -252,7 +237,7 @@ export async function logCardAttempt(
       );
       
       const [
-        userTopicsDoc,
+        deckDoc,
         userSettingsDoc,
         deckProgressDoc,
         globalProgressDoc,
@@ -262,7 +247,7 @@ export async function logCardAttempt(
         customizationsDoc,
         selectedCustomizationsDoc,
       ] = await Promise.all([
-        transaction.get(userTopicsDocRef),
+        transaction.get(deckDocRef),
         transaction.get(userSettingsDocRef),
         transaction.get(deckProgressDocRef),
         transaction.get(globalProgressDocRef),
@@ -370,19 +355,7 @@ export async function logCardAttempt(
         }
         xpStats.commanderXP = globalProgress.xp;
 
-        const topics: Topic[] = userTopicsDoc.exists() ? userTopicsDoc.data().topics || [] : [];
-        let targetDeck: Deck | null = null;
-        let targetTopicIndex = -1;
-        let targetDeckIndex = -1;
-        for (let i = 0; i < topics.length; i++) {
-          const deckIdx = topics[i].decks.findIndex(d => d.id === deckId);
-          if (deckIdx !== -1) {
-            targetDeck = topics[i].decks[deckIdx];
-            targetTopicIndex = i;
-            targetDeckIndex = deckIdx;
-            break;
-          }
-        }
+        const targetDeck = deckDoc.exists() ? (deckDoc.data() as Deck) : null;
         
         if (targetDeck && !targetDeck.isMastered && deckJustLeveledUp) {
           const deckAttemptsQuery = query(collection(getDb(), 'cardAttempts'), where("userId", "==", userId), where("deckId", "==", deckId));
@@ -411,8 +384,7 @@ export async function logCardAttempt(
           if (requiredLevelsForDeck.size > 0 && masteredLevels.length === requiredLevelsForDeck.size) {
             deckMastered = true;
             awardedTokens += DECK_MASTERY_BONUS;
-            topics[targetTopicIndex].decks[targetDeckIndex].isMastered = true;
-            transaction.set(userTopicsDocRef, { topics: sanitizeForFirestore(topics) });
+            transaction.update(deckDocRef, { isMastered: true });
           }
         }
         
@@ -514,26 +486,24 @@ export async function getUserDeckProgress(userId: string, deckId: string): Promi
  */
 export async function getUserProgress(userId: string): Promise<{ global: GlobalProgress, decks: { [deckId: string]: UserDeckProgress & Pick<Deck, 'title' | 'isMastered' | 'totalCards' | 'deckName'> } }> {
     const db = getDb();
-    const userProgressRef = doc(getDb(), 'userProgress', userId);
-    const decksProgressColRef = collection(getDb(), 'userProgress', userId, 'decks');
-    const userTopicsDocRef = doc(getDb(), 'userTopics', userId);
+    const userProgressRef = doc(db, 'userProgress', userId);
+    const decksProgressColRef = collection(db, 'userProgress', userId, 'decks');
+    const userTopicsColRef = collection(db, 'users', userId, 'userTopics');
 
     const [globalSnap, decksSnap, topicsSnap] = await Promise.all([
         getDoc(userProgressRef),
         getDocs(decksProgressColRef),
-        getDoc(userTopicsDocRef)
+        getDocs(userTopicsColRef)
     ]);
 
     const global = globalSnap.exists() 
         ? (globalSnap.data().global || { level: 1, xp: 0, xpToNext: 500 }) 
         : { level: 1, xp: 0, xpToNext: 500 };
     
-    const topicsData = topicsSnap.exists() ? (topicsSnap.data().topics || []) : [];
     const deckInfoMap: { [id: string]: Pick<Deck, 'title' | 'isMastered' | 'cards'> } = {};
-    topicsData.forEach((topic: Topic) => {
-        topic.decks.forEach((deck: Deck) => {
-            deckInfoMap[deck.id] = { title: deck.title, isMastered: deck.isMastered || false, cards: deck.cards || [] };
-        });
+    topicsSnap.forEach((doc) => {
+        const deck = doc.data() as Deck;
+        deckInfoMap[doc.id] = { title: deck.title, isMastered: deck.isMastered || false, cards: deck.cards || [] };
     });
 
     const decks: { [deckId: string]: any } = {};

@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -306,6 +306,7 @@ export default function EditDeckPage() {
   const { deckId } = useParams() as { deckId: string };
   const { user } = useUserAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   const [deck, setDeck] = useState<Deck | null>(null);
@@ -414,6 +415,7 @@ export default function EditDeckPage() {
           description: '',
           cards: [],
           sources: [],
+          topicId: searchParams.get('folderId') || 'unfiled',
         };
         setDeck(newDeck);
         setTitle(newDeck.title);
@@ -453,7 +455,7 @@ export default function EditDeckPage() {
       }
     };
     fetchDeckData();
-  }, [user, deckId, router, toast]);
+  }, [user, deckId, router, toast, searchParams]);
 
   useEffect(() => {
     const set1 = new Set((cards ?? []).map(c => c.bloomLevel ?? (c as any).bloom ?? (c as any).bloom_level ?? (c as any).meta?.bloom ?? '<<none>>'));

@@ -1,4 +1,5 @@
-﻿"use client";
+
+"use client";
 
 import { useEffect, useState, useRef } from "react";
 import autoAnimate from "@formkit/auto-animate";
@@ -25,7 +26,7 @@ import { motion } from "framer-motion";
 
 // 🔥 Firestore live folders
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
-import {db, getDb} from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 
 type DeckWithProgress = DeckSummary & {
   progress?: {

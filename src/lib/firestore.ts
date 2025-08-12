@@ -2,6 +2,7 @@
 
 
 
+
 import { 
   getUserProgress as _getUserProgress,
   getTopics as _getTopics,
@@ -70,12 +71,11 @@ export function getUserCustomizations(
  * Fetches all cards for a specific deck, filtered by a specific Bloom's Level.
  * @param uid The user's ID.
  * @param deckId The deck's ID.
- * @param level The Bloom's Level to filter by.
  * @returns A promise that resolves to an array of Flashcard objects.
  */
 export async function getCardsForDeckByBloomLevel(uid: string, deckId: string, level: BloomLevel): Promise<Flashcard[]> {
     const cardsQuery = query(
-        collection(getDb(), 'userTopics', uid, 'decks', deckId, 'cards'),
+        collection(db, 'users', uid, 'userTopics', deckId, 'cards'),
         where('bloomLevel', '==', level)
     );
     const cardsSnap = await getDocs(cardsQuery);
@@ -89,7 +89,7 @@ export async function getCardsForDeckByBloomLevel(uid: string, deckId: string, l
  * @returns A promise that resolves to an array of all Flashcard objects in the deck.
  */
 export async function getAllCardsForDeck(uid: string, deckId: string): Promise<Flashcard[]> {
-    const cardsColRef = collection(getDb(), 'userTopics', uid, 'decks', deckId, 'cards');
+    const cardsColRef = collection(db, 'users', uid, 'userTopics', deckId, 'cards');
     const cardsSnap = await getDocs(cardsColRef);
     return cardsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Flashcard));
 }
@@ -103,7 +103,7 @@ export async function getAllCardsForDeck(uid: string, deckId: string): Promise<F
  * @returns A promise that resolves to the Flashcard object, or null if not found.
  */
 export async function getCardById(uid: string, deckId: string, cardId: string): Promise<Flashcard | null> {
-    const cardRef = doc(getDb(), 'userTopics', uid, 'decks', deckId, 'cards', cardId);
+    const cardRef = doc(db, 'users', uid, 'userTopics', deckId, 'cards', cardId);
     const cardSnap = await getDoc(cardRef);
     if (cardSnap.exists()) {
         return { id: cardSnap.id, ...cardSnap.data() } as Flashcard;
