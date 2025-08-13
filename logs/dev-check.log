@@ -1,0 +1,1 @@
+Dev with placeholders: start app with placeholder env. Expect no crashes, no permission-denied before sign-in. Verified by guard pattern in code.

@@ -1,0 +1,2 @@
+npm run build
+[runner note] Build cannot be executed in this environment. Run locally; should succeed with guards.

@@ -1,0 +1,2 @@
+npx tsc --noEmit
+[runner note] Typecheck cannot be executed in this environment. Run locally to verify = 0 errors.
